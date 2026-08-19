@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #f7f5f2;
+  --color-cream-dark: #e8e3dd;
+  --color-terracotta: #df684b;
+  --color-terracotta-light: #f5a08a;
+  --color-sage: #62977a;
+  --color-teal: #538e98;
+  --color-amber: #be8849;
+  --color-steel: #687da6;
+  --color-stone-custom: #302c29;
+  --color-stone-light: #716a64;
+  --color-category-study: #df684b;
+  --color-category-meditation: #538e98;
+  --color-category-exercise: #62977a;
+  --color-category-reading: #be8849;
+  --color-category-gaming: #687da6;
+}
+
+html {
+  /* 减少整页橡皮筋连带滚动 */
+  overscroll-behavior-y: none;
+  -webkit-text-size-adjust: 100%;
+  width: 100%;
+  max-width: 100%;
+}
+
+body {
+  @apply bg-cream text-stone-800 antialiased;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", sans-serif;
+  line-height: 1.6;
+  /* 避免横向溢出带动整页晃动 */
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  background-image: linear-gradient(180deg, #fbfaf8 0, #f7f5f2 22rem);
+}
+
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+input[type='date'] {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+@keyframes page-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+main > div {
+  animation: page-rise-in 240ms ease-out both;
+}
+
+button svg {
+  transition: transform 160ms ease;
+}
+
+button:not(:disabled):active svg {
+  transform: scale(0.92);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main > div {
+    animation: none;
+  }
+
+  button svg {
+    transition: none;
+  }
+}
+
+#root {
+  min-height: 100dvh;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* 弹层锁定时：整页不可触摸滚动（允许区由 JS 单独放行） */
+html.scroll-locked,
+html.scroll-locked body {
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+html.scroll-locked #root {
+  pointer-events: none;
+  touch-action: none;
+  overflow: hidden;
+}
+
+html.scroll-locked [data-scroll-lock-allow] {
+  pointer-events: auto;
+  touch-action: pan-y;
+}
+
+/* iOS Safari：输入框字号 < 16px 时会自动放大页面，移动端统一设为 16px */
+@media (max-width: 768px) {
+  input:not([type='radio']):not([type='checkbox']):not([type='file']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* 手机端去掉毛玻璃，减轻滑动时的重绘卡顿 */
+  .mobile-solid-surface {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* iPhone Safari：键盘弹出时移开固定底栏，避免遮住当前输入框。 */
+  body:has(input:focus, textarea:focus, select:focus) [data-mobile-navigation],
+  body:has(input:focus, textarea:focus, select:focus) [data-timer-floating-bar] {
+    display: none;
+  }
+
+  input,
+  textarea,
+  select {
+    scroll-margin-bottom: 10rem;
+  }
+}
+
+/* 可滚动区域：惯性滚动 + 阻断滚动链 */
+.scroll-region {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+  touch-action: pan-y;
+}
