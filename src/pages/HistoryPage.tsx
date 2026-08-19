@@ -17,7 +17,7 @@ import { today } from '../lib/dateUtils'
 /** 历史页统一卡片容器 */
 function HistoryCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <section className={`rounded-2xl border border-cream-dark/70 bg-white p-3.5 shadow-[0_6px_24px_rgba(48,44,41,0.05)] ${className}`}>{children}</section>
+    <section className={`calico-surface stitched-light rounded-[14px] p-3.5 ${className}`}>{children}</section>
   )
 }
 
@@ -33,11 +33,11 @@ function parseStatDisplay(totalMinutes: number): { value: string; unit: string }
 function HistoryStatCard({ label, value, unit, accent }: { label: string; value: string; unit: string; accent?: boolean }) {
   return (
     <div className="min-w-0 px-2 py-1 text-center">
-      <p className="truncate text-[11px] font-medium text-stone-light">{label}</p>
-      <p className={`mt-1 font-bold tracking-tight ${accent ? 'text-terracotta' : 'text-stone-800'}`}>
+      <p className="truncate text-[11px] font-bold text-chrome-yellow/70">{label}</p>
+      <p className={`depot-display mt-1 font-extrabold tracking-tight ${accent ? 'text-chrome-yellow' : 'text-chrome-yellow'}`}>
         <span className="text-2xl">{value}</span>
       </p>
-      <p className="mt-0.5 truncate text-[11px] text-stone-light">{unit}</p>
+      <p className="mt-0.5 truncate text-[11px] text-chrome-yellow/70">{unit}</p>
     </div>
   )
 }
@@ -76,7 +76,7 @@ export function HistoryPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-3 divide-x divide-cream-dark rounded-2xl border border-cream-dark/70 bg-white px-2 py-3.5 shadow-[0_6px_24px_rgba(48,44,41,0.05)]">
+      <div className="depot-cloth stitched-panel grid grid-cols-3 divide-x divide-chrome-yellow/30 rounded-[14px] px-2 py-4 text-chrome-yellow">
         <HistoryStatCard label="总时间" value={totalStat.value} unit={totalStat.unit} accent />
         <HistoryStatCard label="日均" value={avgStat.value} unit={avgStat.unit} />
         <HistoryStatCard label="连续天数" value={String(streak)} unit="天" />

@@ -9,8 +9,11 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage').then((module) => 
 
 function PageLoader() {
   return (
-    <div className="flex min-h-52 items-center justify-center" role="status" aria-label="页面加载中">
-      <span className="h-7 w-7 animate-spin rounded-full border-[3px] border-cream-dark border-t-terracotta" />
+    <div className="calico-surface stitched-light flex min-h-52 items-center justify-center rounded-[14px]" role="status" aria-label="页面加载中">
+      <div className="flex items-center gap-3 text-sm font-bold text-terracotta">
+        <span className="depot-eyelet" aria-hidden />
+        正在准备页面
+      </div>
     </div>
   )
 }

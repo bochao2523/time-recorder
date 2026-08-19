@@ -27,7 +27,7 @@ export function ConfirmDialog({
       <button
         type="button"
         aria-label="关闭"
-        className="absolute inset-0 touch-none bg-stone-800/40 backdrop-blur-[2px]"
+        className="absolute inset-0 touch-none bg-depot-deep/65"
         onClick={onCancel}
       />
       <div

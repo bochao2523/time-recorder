@@ -1,0 +1,7 @@
+{
+  "tool": "built-in imagegen",
+  "useCase": "ui-mockup",
+  "viewport": "390x844 portrait mobile web",
+  "prompt": "Impeccably executed category-standard Chinese mobile time recorder: neutral light background, white cards, blue primary color; 今天 header and fixed 已保存; summary 今日已记录 2小时40分; equal 补记时间 and 开始计时; fixed running timer card with 00:28:16; standard editable task rows; four-item bottom navigation. Stable fixed sizes, tabular numerals, large touch targets, no glass, gradients, bento, neon, decorative motion or tiny text.",
+  "approved": false
+}

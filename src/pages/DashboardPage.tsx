@@ -44,25 +44,25 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-3">
-      <PageCard className="bg-white/90">
+      <PageCard>
         <h2 className="mb-3 text-[15px] font-semibold text-stone-800">时间范围</h2>
         <TimeRangePicker value={range} onChange={setRange} />
       </PageCard>
 
-      <section className="overflow-hidden rounded-2xl bg-stone-800 p-4 text-white shadow-[0_12px_34px_rgba(48,44,41,0.18)]">
-        <p className="text-xs font-medium text-white/60">总时间</p>
-        <p className="mt-1 text-3xl font-bold tracking-tight">{formatMinutes(total)}</p>
-        <div className="mt-5 grid grid-cols-3 divide-x divide-white/10 border-t border-white/10 pt-4">
+      <section className="depot-cloth stitched-panel overflow-hidden rounded-[14px] p-4 text-chrome-yellow">
+        <p className="depot-display text-xs font-extrabold tracking-[0.08em] text-chrome-yellow/70">总时间</p>
+        <p className="depot-display mt-1 text-4xl font-extrabold tracking-tight">{formatMinutes(total)}</p>
+        <div className="mt-5 grid grid-cols-3 divide-x divide-chrome-yellow/25 border-t border-chrome-yellow/25 pt-4">
           <div className="pr-2">
-            <p className="text-[10px] text-white/55">日均</p>
+            <p className="text-[10px] text-chrome-yellow/65">日均</p>
             <p className="mt-1 truncate text-sm font-semibold">{formatMinutes(dailyAvg)}</p>
           </div>
           <div className="px-2 text-center">
-            <p className="text-[10px] text-white/55">连续天数</p>
+            <p className="text-[10px] text-chrome-yellow/65">连续天数</p>
             <p className="mt-1 text-sm font-semibold">{currentStreak} 天</p>
           </div>
           <div className="pl-2 text-right">
-            <p className="text-[10px] text-white/55">最长连续</p>
+            <p className="text-[10px] text-chrome-yellow/65">最长连续</p>
             <p className="mt-1 text-sm font-semibold">{longestStreak} 天</p>
           </div>
         </div>

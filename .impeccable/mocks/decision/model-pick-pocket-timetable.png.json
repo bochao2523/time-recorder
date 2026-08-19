@@ -1,0 +1,7 @@
+{
+  "tool": "built-in imagegen",
+  "useCase": "ui-mockup",
+  "viewport": "390x844 portrait mobile web",
+  "prompt": "High-fidelity Chinese mobile time recorder home screen in a pocket transit timetable world: compact 今天 header and fixed 已保存 status; precise route-line summary 今日已记录 2小时40分; equal 补记时间 and 开始计时 actions; fixed current-departure row 正在计时·阅读 / 设计心理学 / 00:28:16; editable route-marker rows for 学习、冥想、运动、阅读; persistent four-item bottom navigation. Matte wayfinding sign, folded timetable grid, off-white and navy with restrained amber and route colors; fixed component heights, common affordances, no literal trains, no poster, no gradients, no bento, no decorative motion.",
+  "approved": false
+}

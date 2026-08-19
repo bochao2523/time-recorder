@@ -8,11 +8,11 @@ export const chartCategoryColors = CATEGORIES.map((cat) => categoryColors[cat])
 /** 基础 tooltip 样式 */
 export const baseTooltip = {
   trigger: 'axis' as const,
-  backgroundColor: '#fff',
+  backgroundColor: colors.cream,
   borderColor: colors.creamDark,
   borderWidth: 1,
   padding: [10, 12],
-  extraCssText: 'border-radius:12px;box-shadow:0 8px 28px rgba(48,44,41,.12)',
+  extraCssText: 'border-radius:10px;box-shadow:0 8px 24px rgba(8,43,34,.14)',
   textStyle: { color: colors.stone, fontSize: 13 },
 }
 
@@ -28,9 +28,9 @@ export function categoryLegend(): EChartsOption['legend'] {
 /** 热力图 visualMap 渐变色 */
 export const heatmapColors = [
   colors.creamDark,
-  colors.terracottaLight,
+  '#9B8A3A',
+  '#55735F',
   colors.terracotta,
-  '#B94E36',
 ]
 
 /** 在同一大类色基础上生成小类配色（由浅到深） */

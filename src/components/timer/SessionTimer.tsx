@@ -84,7 +84,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
             {isPaused ? '已暂停' : isCountdown ? '倒计时中' : '计时中'}
           </span>
           {!isPaused && (
-            <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-terracotta" />
+            <span className="inline-flex h-2 w-2 rounded-full bg-chrome-yellow" />
           )}
         </div>
 
@@ -97,7 +97,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
 
         <div className="mt-6 rounded-2xl bg-cream px-4 py-6 text-center">
           <p className="text-xs text-stone-light">{isCountdown ? '剩余时间' : '已计时'}</p>
-          <p className="mt-1 font-mono text-5xl font-semibold tracking-wider text-stone-800 tabular-nums">
+          <p className="stable-timer-slot depot-display mt-1 text-5xl font-extrabold tracking-[0.04em] text-terracotta tabular-nums">
             {formatElapsed(displayMs)}
           </p>
           <p className="mt-2 text-xs text-stone-light">
@@ -110,7 +110,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
             <button
               type="button"
               onClick={resume}
-              className="flex-1 rounded-xl bg-sage py-3 text-sm font-medium text-white transition-colors hover:bg-sage/90"
+              className="min-h-11 flex-1 rounded-xl bg-sage py-3 text-sm font-medium text-white transition-colors hover:bg-sage/90"
             >
               继续
             </button>
@@ -118,7 +118,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
             <button
               type="button"
               onClick={pause}
-              className="flex-1 rounded-xl border border-cream-dark bg-cream py-3 text-sm font-medium text-stone-800 transition-colors hover:bg-cream-dark"
+              className="min-h-11 flex-1 rounded-xl border border-cream-dark bg-cream py-3 text-sm font-medium text-stone-800 transition-colors hover:bg-cream-dark"
             >
               暂停
             </button>
@@ -126,7 +126,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
           <button
             type="button"
             onClick={handleStop}
-            className="flex-1 rounded-xl bg-terracotta py-3 text-sm font-medium text-white transition-colors hover:bg-terracotta/90"
+            className="min-h-11 flex-1 rounded-xl bg-terracotta py-3 text-sm font-medium text-white transition-colors hover:bg-terracotta/90"
           >
             结束并保存
           </button>
@@ -134,7 +134,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
         <button
           type="button"
           onClick={handleDiscard}
-          className="mt-3 w-full py-2 text-center text-xs text-stone-light transition-colors hover:text-stone-800"
+          className="mt-3 min-h-11 w-full py-2 text-center text-xs text-stone-light transition-colors hover:text-stone-800"
         >
           删除本次计时
         </button>
@@ -169,7 +169,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
                       key={item.id}
                       type="button"
                       onClick={() => setMode(item.id)}
-                      className={`rounded-xl px-3 py-2.5 text-left transition-colors ${
+                      className={`min-h-11 rounded-xl px-3 py-2.5 text-left transition-colors ${
                         active
                           ? 'bg-terracotta text-white shadow-sm'
                           : 'bg-cream text-stone-800 hover:bg-cream-dark'
@@ -201,8 +201,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
                   if (e.key === 'Enter') handleStart()
                 }}
                 placeholder="做什么？例如：高等数学"
-                autoFocus
-                className="mt-2 w-full rounded-xl border border-cream-dark bg-white px-3 py-2.5 text-sm focus:border-terracotta focus:outline-none"
+                className="mt-2 min-h-12 w-full rounded-[10px] border border-terracotta/25 bg-calico px-3 py-2.5 text-base focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
               />
             </div>
           </div>
@@ -221,7 +220,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
                       key={cat}
                       type="button"
                       onClick={() => setCategory(cat)}
-                      className={`rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                      className={`min-h-11 rounded-xl px-3 py-2.5 text-sm transition-colors ${
                         active ? 'text-white shadow-sm' : 'bg-cream text-stone-800 hover:bg-cream-dark'
                       }`}
                       style={active ? { backgroundColor: color } : undefined}
@@ -254,7 +253,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
                           setDurationMinutes(mins)
                           setDurationInput(String(mins))
                         }}
-                        className={`rounded-xl px-3 py-2 text-sm transition-colors ${
+                        className={`min-h-11 rounded-xl px-3 py-2 text-sm transition-colors ${
                           active
                             ? 'bg-terracotta text-white'
                             : 'bg-cream text-stone-800 hover:bg-cream-dark'
@@ -284,7 +283,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
                       setDurationMinutes(n)
                       setDurationInput(String(n))
                     }}
-                    className="w-24 rounded-xl border border-cream-dark bg-white px-3 py-2 text-sm text-stone-800 focus:border-terracotta focus:outline-none"
+                    className="min-h-11 w-24 rounded-xl border border-cream-dark bg-white px-3 py-2 text-sm text-stone-800 focus:border-terracotta focus:outline-none"
                   />
                   分钟
                 </label>
@@ -300,7 +299,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
                 type="button"
                 onClick={handleStart}
                 disabled={!canStart}
-                className="w-full rounded-xl bg-terracotta py-3 text-sm font-medium text-white transition-colors hover:bg-terracotta/90 disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-11 w-full rounded-xl bg-terracotta py-3 text-sm font-medium text-white transition-colors hover:bg-terracotta/90 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {mode === 'countdown' ? `开始 ${durationMinutes || '—'} 分钟倒计时` : '开始计时'}
               </button>

@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-19T07:53:58Z",
+  "title": "Design System: 时间站 · Time Depot",
+  "extensions": {
+    "colorMeta": {
+      "depot-green": {
+        "role": "primary",
+        "displayName": "瓶绿色鸭帆布",
+        "canonical": "oklch(31.5% 0.052 171.3)",
+        "tonalRamp": ["oklch(15% 0.052 171.3)", "oklch(26% 0.052 171.3)", "oklch(38% 0.052 171.3)", "oklch(50% 0.052 171.3)", "oklch(62% 0.052 171.3)", "oklch(74% 0.052 171.3)", "oklch(86% 0.052 171.3)", "oklch(95% 0.052 171.3)"]
+      },
+      "depot-deep": {
+        "role": "primary",
+        "displayName": "车厂深绿",
+        "canonical": "oklch(26.1% 0.043 172.4)",
+        "tonalRamp": ["oklch(15% 0.043 172.4)", "oklch(26% 0.043 172.4)", "oklch(38% 0.043 172.4)", "oklch(50% 0.043 172.4)", "oklch(62% 0.043 172.4)", "oklch(74% 0.043 172.4)", "oklch(86% 0.043 172.4)", "oklch(95% 0.043 172.4)"]
+      },
+      "chrome-yellow": {
+        "role": "primary",
+        "displayName": "铬黄色图例",
+        "canonical": "oklch(87.7% 0.180 93.1)",
+        "tonalRamp": ["oklch(15% 0.180 93.1)", "oklch(26% 0.180 93.1)", "oklch(38% 0.180 93.1)", "oklch(50% 0.180 93.1)", "oklch(62% 0.180 93.1)", "oklch(74% 0.180 93.1)", "oklch(86% 0.180 93.1)", "oklch(95% 0.180 93.1)"]
+      },
+      "calico": {
+        "role": "neutral",
+        "displayName": "暖色原坯棉布",
+        "canonical": "oklch(95.2% 0.012 91.5)",
+        "tonalRamp": ["oklch(15% 0.012 91.5)", "oklch(26% 0.012 91.5)", "oklch(38% 0.012 91.5)", "oklch(50% 0.012 91.5)", "oklch(62% 0.012 91.5)", "oklch(74% 0.012 91.5)", "oklch(86% 0.012 91.5)", "oklch(95% 0.012 91.5)"]
+      },
+      "calico-deep": {
+        "role": "neutral",
+        "displayName": "深色棉布底",
+        "canonical": "oklch(89.6% 0.032 89.1)",
+        "tonalRamp": ["oklch(15% 0.032 89.1)", "oklch(26% 0.032 89.1)", "oklch(38% 0.032 89.1)", "oklch(50% 0.032 89.1)", "oklch(62% 0.032 89.1)", "oklch(74% 0.032 89.1)", "oklch(86% 0.032 89.1)", "oklch(95% 0.032 89.1)"]
+      },
+      "cream-dark": {
+        "role": "neutral",
+        "displayName": "棉布阴影边",
+        "canonical": "oklch(81.7% 0.043 87.4)",
+        "tonalRamp": ["oklch(15% 0.043 87.4)", "oklch(26% 0.043 87.4)", "oklch(38% 0.043 87.4)", "oklch(50% 0.043 87.4)", "oklch(62% 0.043 87.4)", "oklch(74% 0.043 87.4)", "oklch(86% 0.043 87.4)", "oklch(95% 0.043 87.4)"]
+      },
+      "depot-ink": {
+        "role": "neutral",
+        "displayName": "车厂墨色",
+        "canonical": "oklch(21.4% 0.006 156.7)",
+        "tonalRamp": ["oklch(15% 0.006 156.7)", "oklch(26% 0.006 156.7)", "oklch(38% 0.006 156.7)", "oklch(50% 0.006 156.7)", "oklch(62% 0.006 156.7)", "oklch(74% 0.006 156.7)", "oklch(86% 0.006 156.7)", "oklch(95% 0.006 156.7)"]
+      },
+      "stone-light": {
+        "role": "neutral",
+        "displayName": "旧石说明色",
+        "canonical": "oklch(46.8% 0.023 90.7)",
+        "tonalRamp": ["oklch(15% 0.023 90.7)", "oklch(26% 0.023 90.7)", "oklch(38% 0.023 90.7)", "oklch(50% 0.023 90.7)", "oklch(62% 0.023 90.7)", "oklch(74% 0.023 90.7)", "oklch(86% 0.023 90.7)", "oklch(95% 0.023 90.7)"]
+      },
+      "stitch": {
+        "role": "tertiary",
+        "displayName": "缝线黄铜",
+        "canonical": "oklch(69.5% 0.105 90.2)",
+        "tonalRamp": ["oklch(15% 0.105 90.2)", "oklch(26% 0.105 90.2)", "oklch(38% 0.105 90.2)", "oklch(50% 0.105 90.2)", "oklch(62% 0.105 90.2)", "oklch(74% 0.105 90.2)", "oklch(86% 0.105 90.2)", "oklch(95% 0.105 90.2)"]
+      },
+      "sage": {
+        "role": "secondary",
+        "displayName": "鼠尾草绿",
+        "canonical": "oklch(47.9% 0.078 161.1)",
+        "tonalRamp": ["oklch(15% 0.078 161.1)", "oklch(26% 0.078 161.1)", "oklch(38% 0.078 161.1)", "oklch(50% 0.078 161.1)", "oklch(62% 0.078 161.1)", "oklch(74% 0.078 161.1)", "oklch(86% 0.078 161.1)", "oklch(95% 0.078 161.1)"]
+      },
+      "teal": {
+        "role": "secondary",
+        "displayName": "车库青绿",
+        "canonical": "oklch(41.4% 0.066 171.6)",
+        "tonalRamp": ["oklch(15% 0.066 171.6)", "oklch(26% 0.066 171.6)", "oklch(38% 0.066 171.6)", "oklch(50% 0.066 171.6)", "oklch(62% 0.066 171.6)", "oklch(74% 0.066 171.6)", "oklch(86% 0.066 171.6)", "oklch(95% 0.066 171.6)"]
+      },
+      "amber": {
+        "role": "secondary",
+        "displayName": "旧铜琥珀",
+        "canonical": "oklch(66.3% 0.130 90.9)",
+        "tonalRamp": ["oklch(15% 0.130 90.9)", "oklch(26% 0.130 90.9)", "oklch(38% 0.130 90.9)", "oklch(50% 0.130 90.9)", "oklch(62% 0.130 90.9)", "oklch(74% 0.130 90.9)", "oklch(86% 0.130 90.9)", "oklch(95% 0.130 90.9)"]
+      },
+      "steel": {
+        "role": "secondary",
+        "displayName": "灰钢绿",
+        "canonical": "oklch(48.8% 0.044 163.3)",
+        "tonalRamp": ["oklch(15% 0.044 163.3)", "oklch(26% 0.044 163.3)", "oklch(38% 0.044 163.3)", "oklch(50% 0.044 163.3)", "oklch(62% 0.044 163.3)", "oklch(74% 0.044 163.3)", "oklch(86% 0.044 163.3)", "oklch(95% 0.044 163.3)"]
+      },
+      "category-gaming": {
+        "role": "secondary",
+        "displayName": "游戏黄褐",
+        "canonical": "oklch(49.6% 0.084 88.0)",
+        "tonalRamp": ["oklch(15% 0.084 88.0)", "oklch(26% 0.084 88.0)", "oklch(38% 0.084 88.0)", "oklch(50% 0.084 88.0)", "oklch(62% 0.084 88.0)", "oklch(74% 0.084 88.0)", "oklch(86% 0.084 88.0)", "oklch(95% 0.084 88.0)"]
+      }
+    },
+    "typographyMeta": {
+      "display": {"displayName": "窄体测量读数", "purpose": "今日总量、计时数字与大型时间度量。"},
+      "headline": {"displayName": "页面标题", "purpose": "固定页头中的当前目的地。"},
+      "title": {"displayName": "中文控制标题", "purpose": "任务、课程与主要操作标签。"},
+      "body": {"displayName": "中文正文", "purpose": "输入、正文、帮助文案与动态内容。"},
+      "label": {"displayName": "车厂图例", "purpose": "短状态、英文眉题与紧凑导航。"}
+    },
+    "shadows": [
+      {"name": "stitched-depot-course", "value": "inset 0 0 0 5px rgba(255,210,0,0.025), inset 0 0 0 6px rgba(182,154,74,0.62), 0 10px 24px rgba(8,43,34,0.13)", "purpose": "深色鸭帆布课程的内嵌缝线与柔和绿黑深度。"},
+      {"name": "stitched-calico-course", "value": "inset 0 0 0 5px rgba(242,239,230,0.65), inset 0 0 0 6px rgba(14,58,46,0.18), 0 8px 20px rgba(23,26,24,0.08)", "purpose": "浅色棉布课程的克制边缘与浅层深度。"},
+      {"name": "navigation-fixed", "value": "0 -10px 26px rgba(8,43,34,0.18)", "purpose": "固定底部导航与滚动内容分离。"},
+      {"name": "timer-modal", "value": "0 -16px 42px rgba(8,43,34,0.28)", "purpose": "移动端计时底部弹层。"}
+    ],
+    "motion": [
+      {"name": "state-color", "value": "140ms ease-out", "purpose": "只过渡文字色、背景色、边框色与不透明度。"},
+      {"name": "reduced-motion", "value": "none", "purpose": "减少动态效果偏好下取消过渡与滚动动画。"}
+    ],
+    "breakpoints": [
+      {"name": "sm", "value": "640px"},
+      {"name": "mobile-input-safety", "value": "768px"}
+    ]
+  },
+  "components": [
+    {
+      "name": "铬黄主按钮",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "用于开始计时、导出等清晰主行动；保持 48px 高与 10px 控制圆角。",
+      "html": "<button class=\"ds-primary-button\" type=\"button\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"13\" r=\"8\"/><path d=\"M12 9v4l2.5 1.5M9 2h6\"/></svg><span>开始计时</span></button>",
+      "css": ".ds-primary-button { min-height:48px; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; border:1px solid #0e3a2e; border-radius:10px; background:#ffd200; color:#0e3a2e; font:800 14px/1.2 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; transition:color 140ms ease-out,background-color 140ms ease-out,border-color 140ms ease-out,opacity 140ms ease-out; box-shadow:0 6px 16px rgba(8,43,34,.13); cursor:pointer; } .ds-primary-button svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; } .ds-primary-button:hover { background:#f1c700; } .ds-primary-button:active { background:#e8bf00; } .ds-primary-button:focus-visible { outline:3px solid #ffd200; outline-offset:3px; box-shadow:0 0 0 1px #0e3a2e,0 6px 16px rgba(8,43,34,.13); } @media (prefers-reduced-motion:reduce){.ds-primary-button{transition:none;}}"
+    },
+    {
+      "name": "棉布双入口操作面",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "首页补记与计时的等权小型表面；两块必须并列使用。",
+      "html": "<div class=\"ds-entry-pair\"><button class=\"ds-entry-tile\" type=\"button\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z\"/></svg><span>补记时间</span></button><button class=\"ds-entry-tile\" type=\"button\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m10 8 6 4-6 4V8Z\"/></svg><span>开始计时</span></button></div>",
+      "css": ".ds-entry-pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding-top:16px; border-top:1px solid rgba(255,210,0,.35); background:#0e3a2e; } .ds-entry-tile { min-height:88px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:12px; border:1px solid rgba(14,58,46,.22); border-radius:12px; background:#f2efe6; color:#0e3a2e; font:800 14px/1.2 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; box-shadow:inset 0 0 0 5px rgba(242,239,230,.65),inset 0 0 0 6px rgba(14,58,46,.18),0 8px 20px rgba(23,26,24,.08); transition:color 140ms ease-out,background-color 140ms ease-out,border-color 140ms ease-out,opacity 140ms ease-out; cursor:pointer; } .ds-entry-tile svg { width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; } .ds-entry-tile:hover { background:#eee6d3; } .ds-entry-tile:active { background:#cfc2a4; } .ds-entry-tile:focus-visible { outline:3px solid #ffd200; outline-offset:3px; } @media (prefers-reduced-motion:reduce){.ds-entry-tile{transition:none;}}"
+    },
+    {
+      "name": "今日总量课程",
+      "kind": "card",
+      "refersTo": "surface-depot",
+      "description": "紧凑显示日期总量、记录数和状态，并承载两块等权入口。",
+      "html": "<section class=\"ds-summary-course\"><div class=\"ds-summary-row\"><div><p class=\"ds-summary-kicker\">今日已记录</p><p class=\"ds-summary-total\">128 分钟</p></div><dl class=\"ds-summary-meta\"><dt>记录</dt><dd>3 项</dd><dt>状态</dt><dd>计时中</dd></dl></div><div class=\"ds-summary-seam\" aria-hidden=\"true\"></div></section>",
+      "css": ".ds-summary-course { overflow:hidden; padding:16px; border:1px solid rgba(23,26,24,.26); border-radius:14px; background:#0e3a2e; color:#ffd200; box-shadow:inset 0 0 0 5px rgba(255,210,0,.025),inset 0 0 0 6px rgba(182,154,74,.62),0 10px 24px rgba(8,43,34,.13); } .ds-summary-row { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; } .ds-summary-kicker { margin:0; color:rgba(255,210,0,.85); font:800 14px/1 \"Barlow Condensed\",Arial Narrow,sans-serif; letter-spacing:.08em; } .ds-summary-total { margin:6px 0 0; white-space:nowrap; font:800 43px/1 \"Barlow Condensed\",Arial Narrow,sans-serif; letter-spacing:-.02em; font-variant-numeric:tabular-nums lining-nums; } .ds-summary-meta { display:grid; grid-template-columns:auto auto; gap:2px 12px; margin:0; color:rgba(255,210,0,.75); font:700 10px/1.25 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; text-align:right; } .ds-summary-meta dt,.ds-summary-meta dd { margin:0; } .ds-summary-seam { margin-top:16px; border-top:1px solid rgba(255,210,0,.35); }"
+    },
+    {
+      "name": "当前计时课程",
+      "kind": "custom",
+      "refersTo": "surface-depot",
+      "description": "固定任务、8.5ch 计时数字和 44px 播放/暂停控制，不随状态重新排版。",
+      "html": "<section class=\"ds-timer-course\" aria-label=\"当前计时\"><div class=\"ds-timer-copy\"><p class=\"ds-timer-status\">正在计时 · 学习</p><p class=\"ds-timer-task\">高等数学</p></div><p class=\"ds-timer-digits\">00:28:16</p><button class=\"ds-timer-control\" type=\"button\" aria-label=\"暂停计时\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M7 5h4v14H7zM13 5h4v14h-4z\"/></svg></button></section>",
+      "css": ".ds-timer-course { min-height:88px; display:flex; align-items:center; gap:12px; overflow:hidden; padding:12px 16px; border:1px solid rgba(23,26,24,.26); border-radius:14px; background:#0e3a2e; color:#ffd200; box-shadow:inset 0 0 0 5px rgba(255,210,0,.025),inset 0 0 0 6px rgba(182,154,74,.62),0 10px 24px rgba(8,43,34,.13); } .ds-timer-copy { min-width:0; flex:1; } .ds-timer-status { margin:0; color:rgba(255,210,0,.8); font:800 12px/1 \"Barlow Condensed\",Arial Narrow,sans-serif; letter-spacing:.08em; } .ds-timer-task { overflow:hidden; margin:7px 0 0; font:700 16px/1.2 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; text-overflow:ellipsis; white-space:nowrap; } .ds-timer-digits { min-width:8.5ch; margin:0; font:800 24px/1 \"Barlow Condensed\",Arial Narrow,sans-serif; font-variant-numeric:tabular-nums lining-nums; letter-spacing:.04em; text-align:right; contain:layout paint; } .ds-timer-control { width:44px; height:44px; flex:0 0 44px; display:grid; place-items:center; padding:0; border:1px solid rgba(255,210,0,.65); border-radius:10px; background:transparent; color:#ffd200; transition:color 140ms ease-out,background-color 140ms ease-out,border-color 140ms ease-out,opacity 140ms ease-out; cursor:pointer; } .ds-timer-control svg { width:18px; height:18px; fill:currentColor; } .ds-timer-control:hover,.ds-timer-control:active { background:#ffd200; color:#0e3a2e; } .ds-timer-control:focus-visible { outline:3px solid #ffd200; outline-offset:3px; } @media (prefers-reduced-motion:reduce){.ds-timer-control{transition:none;}}"
+    },
+    {
+      "name": "任务分类课程",
+      "kind": "card",
+      "refersTo": "surface-calico",
+      "description": "稳定的 4.5rem 折叠头部，组合分类图标、标题、项目数和总分钟。",
+      "html": "<section class=\"ds-category-course\"><button class=\"ds-category-header\" type=\"button\" aria-expanded=\"false\"><span class=\"ds-category-lead\"><span class=\"ds-category-icon\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m3 10 9-5 9 5-9 5-9-5Z\"/><path d=\"M7 12.5V17c2.8 2 7.2 2 10 0v-4.5M21 10v6\"/></svg></span><span><strong>学习</strong><small>3 个项目</small></span></span><span class=\"ds-category-total\"><b>75</b> 分钟 <svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m6 9 6 6 6-6\"/></svg></span></button></section>",
+      "css": ".ds-category-course { overflow:hidden; padding:0 14px; border:1px solid rgba(14,58,46,.22); border-radius:14px; background:#f2efe6; color:#171a18; box-shadow:inset 0 0 0 5px rgba(242,239,230,.65),inset 0 0 0 6px rgba(14,58,46,.18),0 8px 20px rgba(23,26,24,.08); } .ds-category-header { min-height:72px; width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0; border:0; background:transparent; color:#0e3a2e; text-align:left; cursor:pointer; } .ds-category-lead { min-width:0; display:flex; align-items:center; gap:8px; } .ds-category-icon { width:44px; height:44px; flex:0 0 44px; display:grid; place-items:center; border-radius:10px; background:#0e3a2e; color:#ffd200; } .ds-category-icon svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; } .ds-category-lead strong { display:block; font:800 16px/1.2 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; } .ds-category-lead small { display:block; margin-top:4px; color:#5f5a4c; font:500 11px/1.2 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; } .ds-category-total { flex:0 0 auto; display:flex; align-items:center; gap:6px; color:#0e3a2e; font:600 14px/1.2 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; } .ds-category-total b { color:#171a18; font-family:\"Barlow Condensed\",Arial Narrow,sans-serif; font-weight:800; font-variant-numeric:tabular-nums; } .ds-category-total svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; } .ds-category-header:hover { color:#082b22; } .ds-category-header:active { opacity:.8; } .ds-category-header:focus-visible { outline:2px solid #ffd200; outline-offset:-2px; } @media (prefers-reduced-motion:reduce){.ds-category-header{transition:none;}}"
+    },
+    {
+      "name": "任务输入字段",
+      "kind": "input",
+      "refersTo": "input-standard",
+      "description": "移动端安全的 16px 文本字段，使用瓶绿边和铬黄焦点环。",
+      "html": "<label class=\"ds-field-label\" for=\"ds-task-name\">任务名称</label><input class=\"ds-task-input\" id=\"ds-task-name\" type=\"text\" value=\"高等数学\" />",
+      "css": ".ds-field-label { display:block; margin-bottom:8px; color:#171a18; font:500 14px/1.2 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; } .ds-task-input { min-height:48px; width:100%; padding:8px 12px; border:1px solid rgba(14,58,46,.25); border-radius:10px; background:#f2efe6; color:#171a18; caret-color:#0e3a2e; font:500 16px/1.4 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; transition:color 140ms ease-out,background-color 140ms ease-out,border-color 140ms ease-out,opacity 140ms ease-out; } .ds-task-input:hover { border-color:rgba(14,58,46,.5); } .ds-task-input:focus { border-color:#0e3a2e; background:#fff; outline:none; box-shadow:0 0 0 2px rgba(255,210,0,.55); } .ds-task-input:focus-visible { outline:3px solid #ffd200; outline-offset:3px; } .ds-task-input:disabled { cursor:not-allowed; opacity:.4; } @media (prefers-reduced-motion:reduce){.ds-task-input{transition:none;}}"
+    },
+    {
+      "name": "底部目的地导航",
+      "kind": "nav",
+      "refersTo": "navigation-active",
+      "description": "四个等宽目的地格；移动端图标在上，当前页整格使用铬黄色。",
+      "html": "<nav class=\"ds-bottom-nav\" aria-label=\"主导航\"><a class=\"ds-nav-item ds-nav-active\" href=\"#today\" aria-current=\"page\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z\"/></svg><span>今日</span></a><a class=\"ds-nav-item\" href=\"#history\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"17\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/></svg><span>记录</span></a><a class=\"ds-nav-item\" href=\"#stats\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3 3v18h18\"/><path d=\"m7 15 4-4 3 3 5-6\"/></svg><span>统计</span></a><a class=\"ds-nav-item\" href=\"#settings\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><circle cx=\"12\" cy=\"12\" r=\"8\"/></svg><span>设置</span></a></nav>",
+      "css": ".ds-bottom-nav { height:72px; display:flex; overflow:hidden; border:1px solid rgba(255,210,0,.6); border-radius:14px; background:#0e3a2e; box-shadow:0 -10px 26px rgba(8,43,34,.18); } .ds-nav-item { min-width:0; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border-right:1px solid rgba(255,210,0,.25); color:#eee6d3; text-decoration:none; transition:color 140ms ease-out,background-color 140ms ease-out,border-color 140ms ease-out,opacity 140ms ease-out; } .ds-nav-item:last-child { border-right:0; } .ds-nav-item svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; } .ds-nav-item span { overflow:hidden; max-width:100%; font:800 13px/1 \"Barlow Condensed\",Arial Narrow,sans-serif; letter-spacing:.04em; text-overflow:ellipsis; white-space:nowrap; } .ds-nav-item:hover { background:rgba(255,255,255,.1); color:#fff; } .ds-nav-item:active { opacity:.8; } .ds-nav-item:focus-visible { outline:2px solid #ffd200; outline-offset:-2px; } .ds-nav-active,.ds-nav-active:hover { background:#ffd200; color:#0e3a2e; } @media (min-width:640px){.ds-bottom-nav{height:64px}.ds-nav-item{flex-direction:row;gap:8px}} @media (prefers-reduced-motion:reduce){.ds-nav-item{transition:none;}}"
+    },
+    {
+      "name": "已保存状态块",
+      "kind": "chip",
+      "refersTo": "status-saved",
+      "description": "固定 5.5rem × 2rem 的保存状态槽；空闲时仍保留同一尺寸。",
+      "html": "<div class=\"ds-save-status\" role=\"status\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m20 6-11 11-5-5\"/></svg><span>已保存</span></div>",
+      "css": ".ds-save-status { width:5.5rem; min-width:5.5rem; height:2rem; display:flex; align-items:center; justify-content:center; gap:6px; padding:0 8px; border:1px solid rgba(14,58,46,.3); border-radius:10px; background:#0e3a2e; color:#ffd200; font:700 12px/1 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; contain:layout paint; } .ds-save-status svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "一天是一扇 Depot Window",
+    "overview": "界面借用中国铁路车厂目的地牌的秩序感：每一天像一扇固定的 depot window，时间总数、当前计时和任务课程在各自槽位里清楚呈现。它不是交通主题装饰，而是一套服务于短时、单手操作的控制面板；用户进入页面后先完成补记或计时，再阅读解释。\n\n瓶绿色鸭帆布承载状态与关键读数，暖色原坯棉布承载输入和内容，铬黄色像压印在站牌上的功能图例。缝线、边框和黄铜感孔眼提供材料线索，但所有信息仍由语义文本、原生控件和内联 SVG 构成。整体是触感明确、紧凑而不拥挤的移动优先工具，手动补记与实时计时始终平等。",
+    "keyCharacteristics": [
+      "控制优先：今日总量紧凑呈现，两条主入口并列处于首屏拇指热区。",
+      "材料有来源：只使用瓶绿色鸭帆布与暖色原坯棉布两种固定纹理。",
+      "状态有槽位：标题、帮助文案、保存状态和计时数字先预留尺寸，再更新内容。",
+      "度量有口音：中文使用系统无衬线，读数和小型车厂图例使用窄体字与等宽数字。",
+      "运动受约束：反馈只改变颜色、背景、边框或不透明度，不移动布局。"
+    ],
+    "rules": [
+      {"name": "The Signal Yellow Rule", "body": "铬黄色只表达激活、关键读数、主要行动或焦点；如果一个元素只是装饰，就使用黄铜缝线色而不是铬黄。", "section": "colors"},
+      {"name": "The Solid Backing Rule", "body": "所有纹理都覆盖在可独立满足可读性的纯色底上；纹理加载失败时，层级、状态和对比度不得改变。", "section": "colors"},
+      {"name": "The Measurement Voice Rule", "body": "只有读数、时间和短图例使用窄体；任务名、说明与输入始终使用中文系统无衬线。", "section": "typography"},
+      {"name": "The Stable Numeral Rule", "body": "所有计时与总量使用等宽数字，并为最长可信内容预留宽度。", "section": "typography"},
+      {"name": "The Reserved Slot Rule", "body": "页头、帮助文案、保存状态和计时读数使用固定或最小尺寸槽位；状态变化只替换内容，不重新排版周围界面。", "section": "layout"},
+      {"name": "The Equal Entry Rule", "body": "补记时间与开始计时在尺寸、视觉权重和首屏可达性上始终平等。", "section": "layout"},
+      {"name": "The Sewn Depth Rule", "body": "先用边框与内嵌缝线定义材料边缘，最后才加一层柔和投影；不要用多层浮卡代替信息层级。", "section": "elevation"},
+      {"name": "The 10/14 Rule", "body": "控件以 10px 为默认圆角，承载一组信息的主要表面以 14px 为默认圆角；只有明确的中间层操作课程或弹层可偏离。", "section": "shapes"}
+    ],
+    "dos": [
+      "Do 保持补记时间与开始计时同时可见、同等大小、同等视觉权重。",
+      "Do 为主要触控目标保留至少 44px，并让移动端输入字号保持 16px 或更大。",
+      "Do 为计时数字、保存状态、帮助文案和页头内容预留固定槽位。",
+      "Do 把两种固定纹理放在纯色可访问底色之上，并让装饰层不接收指针事件。",
+      "Do 使用清晰的 `:focus-visible` 样式，并尊重减少动态效果偏好。",
+      "Do 使用简洁、自然的中文标签和真实产品状态。"
+    ],
+    "donts": [
+      "Don't 添加页面加载动画、脉冲、闪烁、过冲或持续动效。",
+      "Don't 使用 transform 按压反馈、背景毛玻璃或会引发布局位移的交互。",
+      "Don't 让目的地牌滚动、翻页或模拟机械卷动；窗口必须稳定。",
+      "Don't 让纹理随内容或滚动产生漂移，也不要叠加第三种纹理、噪点或滤镜。",
+      "Don't 用通用白色 SaaS 卡片、交通工具插画或营销装饰稀释车厂材料世界。",
+      "Don't 把文字、图标、图表、状态或控件栅格化进图片。"
+    ]
+  }
+}

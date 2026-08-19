@@ -1,59 +1,76 @@
+@import "@fontsource/barlow-condensed/latin-600.css";
+@import "@fontsource/barlow-condensed/latin-800.css";
 @import "tailwindcss";
 
 @theme {
-  --color-cream: #f6f3ee;
-  --color-cream-dark: #e4ded5;
-  --color-terracotta: #d95f43;
-  --color-terracotta-light: #f5a08a;
-  --color-sage: #62977a;
-  --color-teal: #538e98;
-  --color-amber: #be8849;
-  --color-steel: #687da6;
-  --color-stone-custom: #2d2926;
-  --color-stone-light: #6e665f;
-  --color-category-study: #df684b;
-  --color-category-meditation: #538e98;
-  --color-category-exercise: #62977a;
-  --color-category-reading: #be8849;
-  --color-category-gaming: #687da6;
+  --color-cream: #eee6d3;
+  --color-cream-dark: #cfc2a4;
+  --color-terracotta: #0e3a2e;
+  --color-terracotta-light: #ffd200;
+  --color-sage: #2f6b4f;
+  --color-teal: #1d5747;
+  --color-amber: #b18f18;
+  --color-steel: #496859;
+  --color-stone-custom: #171a18;
+  --color-stone-light: #5f5a4c;
+  --color-category-study: #0e3a2e;
+  --color-category-meditation: #2f6b4f;
+  --color-category-exercise: #b18f18;
+  --color-category-reading: #496859;
+  --color-category-gaming: #765f22;
+  --color-depot-green: #0e3a2e;
+  --color-depot-deep: #082b22;
+  --color-chrome-yellow: #ffd200;
+  --color-calico: #f2efe6;
+  --color-depot-ink: #171a18;
+}
+
+:root {
+  --depot-green: #0e3a2e;
+  --depot-green-deep: #082b22;
+  --chrome-yellow: #ffd200;
+  --calico: #f2efe6;
+  --calico-deep: #e5dcc5;
+  --depot-ink: #171a18;
+  --stitch: #b69a4a;
 }
 
 html {
-  /* 减少整页橡皮筋连带滚动 */
   overscroll-behavior-y: none;
   -webkit-text-size-adjust: 100%;
   width: 100%;
   max-width: 100%;
-  scrollbar-color: #c9bfb4 #f6f3ee;
+  scrollbar-color: #0e3a2e #e5dcc5;
+  background: var(--calico-deep);
 }
 
 body {
-  @apply bg-cream text-stone-800 antialiased;
+  @apply text-stone-800 antialiased;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", sans-serif;
   line-height: 1.6;
-  /* 避免横向溢出带动整页晃动 */
   overflow-x: hidden;
   width: 100%;
   max-width: 100%;
-  background-image:
-    radial-gradient(circle at 50% -8rem, rgba(217, 95, 67, 0.08), transparent 28rem),
-    linear-gradient(180deg, #fbfaf8 0, #f6f3ee 28rem);
+  min-height: 100svh;
+  background-color: var(--calico-deep);
+  background-image: url('./assets/depot-calico-cloth-texture.jpg');
+  background-size: 320px 320px;
 }
 
 ::selection {
-  background: rgba(217, 95, 67, 0.2);
-  color: #2d2926;
+  background: var(--chrome-yellow);
+  color: var(--depot-green-deep);
 }
 
 :focus-visible {
-  outline: 2px solid rgba(217, 95, 67, 0.72);
+  outline: 3px solid var(--chrome-yellow);
   outline-offset: 3px;
 }
 
 input,
 textarea,
 select {
-  caret-color: var(--color-terracotta);
+  caret-color: var(--depot-green);
 }
 
 button,
@@ -67,59 +84,127 @@ button {
   touch-action: manipulation;
 }
 
+button,
+a {
+  transition-property: color, background-color, border-color, opacity;
+  transition-duration: 140ms;
+  transition-timing-function: ease-out;
+}
+
 input[type='date'] {
   box-sizing: border-box;
   inline-size: 100%;
   min-inline-size: 0;
 }
 
-@keyframes page-rise-in {
-  from {
-    opacity: 0.72;
-    filter: blur(2px);
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    filter: blur(0);
-    transform: translateY(0);
-  }
-}
-
-main > div {
-  animation: page-rise-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-button svg {
-  transition: transform 160ms ease;
-}
-
-button:not(:disabled):active svg {
-  transform: scale(0.92);
-}
-
-@media (hover: hover) {
-  a,
-  button {
-    transition-duration: 180ms;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  main > div {
-    animation: none;
-  }
-
-  button svg {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition: none;
   }
 }
 
 #root {
-  min-height: 100dvh;
+  min-height: 100svh;
   overflow-x: hidden;
   width: 100%;
   max-width: 100%;
+}
+
+.depot-display {
+  font-family: "Barlow Condensed", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-stretch: condensed;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.depot-cloth,
+.calico-surface {
+  isolation: isolate;
+}
+
+.depot-cloth:not(.fixed),
+.calico-surface:not(.sticky):not(.fixed) {
+  position: relative;
+}
+
+.depot-cloth::before,
+.calico-surface::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+  background-repeat: repeat;
+  background-size: 320px 320px;
+}
+
+.depot-cloth {
+  color: var(--chrome-yellow);
+  background-color: var(--depot-green);
+}
+
+.depot-cloth::before {
+  background-image: url('./assets/depot-duck-cloth-texture.jpg');
+  opacity: 0.62;
+}
+
+.calico-surface {
+  color: var(--depot-ink);
+  background-color: var(--calico);
+}
+
+.calico-surface::before {
+  background-image: url('./assets/depot-calico-cloth-texture.jpg');
+  opacity: 0.68;
+}
+
+.stitched-panel {
+  border: 1px solid rgba(23, 26, 24, 0.26);
+  box-shadow:
+    inset 0 0 0 5px rgba(255, 210, 0, 0.025),
+    inset 0 0 0 6px rgba(182, 154, 74, 0.62),
+    0 10px 24px rgba(8, 43, 34, 0.13);
+}
+
+.stitched-light {
+  border: 1px solid rgba(14, 58, 46, 0.22);
+  box-shadow:
+    inset 0 0 0 5px rgba(242, 239, 230, 0.65),
+    inset 0 0 0 6px rgba(14, 58, 46, 0.18),
+    0 8px 20px rgba(23, 26, 24, 0.08);
+}
+
+.depot-eyelet {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border: 3px solid #9c7b24;
+  border-radius: 999px;
+  background: #e8d28c;
+  box-shadow: inset 0 0 0 2px #3d3319, 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.stable-status-slot {
+  width: 5.5rem;
+  min-width: 5.5rem;
+  height: 2rem;
+  contain: layout paint;
+}
+
+.stable-timer-slot {
+  min-width: 8.5ch;
+  font-variant-numeric: tabular-nums lining-nums;
+  contain: layout paint;
+}
+
+.no-layout-animation,
+.no-layout-animation * {
+  transition-property: color, background-color, border-color, opacity !important;
 }
 
 /* 弹层锁定时：整页不可触摸滚动（允许区由 JS 单独放行） */

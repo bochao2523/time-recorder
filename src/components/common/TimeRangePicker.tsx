@@ -30,7 +30,7 @@ export function TimeRangePicker({ value, onChange, className = '' }: TimeRangePi
                 end: p.key === 'custom' ? value.end : today(),
               })
             }
-            className={`min-h-10 rounded-lg px-1 text-[13px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/30 ${
+            className={`min-h-10 rounded-lg px-1 text-[13px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chrome-yellow ${
               value.preset === p.key
                 ? 'bg-white text-terracotta shadow-sm'
                 : 'text-stone-light active:bg-white/70'

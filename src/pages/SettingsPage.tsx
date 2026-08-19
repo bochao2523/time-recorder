@@ -36,7 +36,7 @@ export function SettingsPage() {
     if (!pendingJson) return
     try {
       importRecords(pendingJson, importMode)
-      showToast('备份导入好啦 ✨')
+      showToast('备份导入成功')
     } catch (err) {
       showToast(err instanceof Error ? err.message : '导入失败', 'error')
     }
@@ -52,14 +52,14 @@ export function SettingsPage() {
         onHide={() => setToast((t) => ({ ...t, visible: false }))}
       />
 
-      <section className="rounded-2xl bg-sage px-4 py-3.5 text-white shadow-[0_10px_30px_rgba(98,151,122,0.2)]">
+      <section className="depot-cloth stitched-panel rounded-[14px] px-4 py-4 text-chrome-yellow">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-chrome-yellow/45">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></svg>
           </span>
           <div>
             <h2 className="font-semibold">数据保存在本机</h2>
-            <p className="mt-1 text-xs leading-relaxed text-white/80">换手机或清理 Safari 数据前，请先导出备份。</p>
+            <p className="mt-1 text-xs leading-relaxed text-chrome-yellow/75">换手机或清理 Safari 数据前，请先导出备份。</p>
           </div>
         </div>
       </section>
@@ -77,7 +77,7 @@ export function SettingsPage() {
           <button
             type="button"
             onClick={exportRecords}
-            className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-terracotta px-4 text-sm font-semibold text-white shadow-[0_6px_18px_rgba(223,104,75,0.2)] active:scale-[0.99] active:opacity-90"
+            className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[10px] bg-chrome-yellow px-4 text-sm font-extrabold text-terracotta shadow-[0_6px_16px_rgba(8,43,34,0.12)] active:bg-[#e8bf00]"
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>
             导出备份
@@ -85,7 +85,7 @@ export function SettingsPage() {
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-cream-dark bg-cream px-4 text-sm font-semibold text-stone-800 active:scale-[0.99] active:bg-cream-dark"
+            className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[10px] border border-terracotta/30 bg-calico px-4 text-sm font-bold text-terracotta active:bg-cream-dark"
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 15V3" /><path d="m7 8 5-5 5 5" /><path d="M5 21h14" /></svg>
             导入备份

@@ -1,0 +1,7 @@
+{
+  "tool": "built-in imagegen",
+  "useCase": "ui-mockup",
+  "viewport": "390x844 portrait mobile web",
+  "prompt": "High-fidelity Chinese mobile time recorder home screen in a library checkout card daily-ledger world: compact 今天 header and fixed 已保存 status; dominant cotton-card 今日已记录 2小时40分 ledger; equal 补记时间 and 开始计时 actions; fixed-height 正在计时·阅读 strip with 00:28:16; editable category rows for 学习、冥想、运动、阅读; persistent four-item bottom navigation. Warm cotton card, blue-black ink, muted stamp red, faded rules; modern recognizable controls, fixed state-region sizes, tabular digits, no phone frame, no poster, no glass, no gradients, no heavy shadow, no decorative motion.",
+  "approved": false
+}

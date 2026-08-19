@@ -12,27 +12,27 @@ export function NavBar() {
     <nav
       data-mobile-navigation
       aria-label="主导航"
-      className="mobile-solid-surface fixed bottom-0 left-0 right-0 z-20 border-t border-cream-dark/80 bg-white/95 shadow-[0_-8px_28px_rgba(45,41,38,0.07)] backdrop-blur-md sm:bottom-5 sm:left-1/2 sm:right-auto sm:w-[28rem] sm:-translate-x-1/2 sm:rounded-2xl sm:border sm:border-white/80 sm:bg-white/90 sm:shadow-[0_16px_42px_rgba(45,41,38,0.16)]"
+      className="depot-cloth fixed bottom-0 left-0 right-0 z-20 border-t border-chrome-yellow/60 shadow-[0_-10px_26px_rgba(8,43,34,0.18)] sm:bottom-5 sm:left-1/2 sm:right-auto sm:w-[28rem] sm:-translate-x-1/2 sm:overflow-hidden sm:rounded-[14px] sm:border"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="mx-auto flex h-16 max-w-3xl items-stretch px-2 sm:h-14 sm:px-1.5">
+      <div className="mx-auto flex h-[4.5rem] max-w-3xl items-stretch sm:h-16">
         {tabs.map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}
             end={tab.end}
             className={({ isActive }) =>
-              `group flex min-w-0 flex-1 flex-col items-center justify-center rounded-xl text-xs transition-[color,background-color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/30 active:scale-[0.97] sm:flex-row sm:gap-2 ${
-                isActive ? 'font-semibold text-terracotta' : 'text-stone-light hover:bg-cream/75 hover:text-stone-800'
+              `group flex min-w-0 flex-1 flex-col items-center justify-center border-r border-chrome-yellow/25 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-chrome-yellow last:border-r-0 sm:flex-row sm:gap-2 ${
+                isActive ? 'bg-chrome-yellow font-extrabold text-terracotta' : 'text-cream hover:bg-white/10 hover:text-white'
               }`
             }
           >
             {({ isActive }) => (
               <>
-                <span className={`flex h-8 min-w-10 items-center justify-center rounded-full transition-colors sm:h-9 sm:min-w-9 sm:rounded-xl ${isActive ? 'bg-terracotta/10' : 'group-hover:bg-white'}`}>
+                <span className={`flex h-8 min-w-10 items-center justify-center ${isActive ? '' : 'opacity-85'}`}>
                   <TabIcon path={tab.to} />
                 </span>
-                <span className="mt-0.5 truncate sm:mt-0">{tab.label}</span>
+                <span className="depot-display mt-0.5 truncate text-[13px] font-bold tracking-[0.04em] sm:mt-0">{tab.label}</span>
               </>
             )}
           </NavLink>

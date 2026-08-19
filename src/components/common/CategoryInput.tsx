@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Category, CategorySubItem } from '../../types'
 import { CATEGORY_LABELS } from '../../types'
-import { categoryColors } from '../../theme/colors'
 import { sumSubItemMinutes } from '../../lib/categoryItems'
 
 interface CategoryInputProps {
@@ -93,7 +92,6 @@ export function CategoryInput({
   onQuickTimer,
   activeTaskName,
 }: CategoryInputProps) {
-  const color = categoryColors[category]
   const rows = displayItems(items)
   const total = sumSubItemMinutes(items)
   const [isExpanded, setIsExpanded] = useState(items.length > 0)
@@ -160,22 +158,25 @@ export function CategoryInput({
 
   return (
     <section
-      className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl bg-white px-3.5 shadow-[0_8px_24px_rgba(45,41,38,0.065)] ring-1 ring-stone-800/[0.055] transition-[box-shadow,transform] hover:shadow-[0_12px_30px_rgba(45,41,38,0.09)] sm:px-4"
+      className="calico-surface stitched-light w-full min-w-0 max-w-full overflow-hidden rounded-[14px] px-3.5 sm:px-4"
     >
       <button
         type="button"
         aria-expanded={isExpanded}
         onClick={() => setIsExpanded((expanded) => !expanded)}
-        className="flex min-h-16 w-full items-center justify-between gap-3 rounded-xl text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/30 active:scale-[0.99]"
+        className="flex min-h-[4.5rem] w-full items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-chrome-yellow"
       >
         <span className="flex min-w-0 items-center gap-2">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${color}16`, color }}>
+          <span className="depot-cloth flex h-11 w-11 items-center justify-center rounded-[10px] text-chrome-yellow">
             <CategoryIcon category={category} />
           </span>
-          <span className="font-semibold text-stone-800">{CATEGORY_LABELS[category]}</span>
+          <span>
+            <span className="block font-extrabold text-terracotta">{CATEGORY_LABELS[category]}</span>
+            <span className="block text-[11px] font-medium text-stone-light">{items.length > 0 ? `${items.length} 个项目` : '还没有项目'}</span>
+          </span>
         </span>
         <span className="flex shrink-0 items-center gap-2 text-sm text-stone-light">
-          <span className={total > 0 ? '' : 'font-semibold'} style={total > 0 ? undefined : { color }}>
+          <span className={total > 0 ? 'depot-display font-extrabold text-terracotta' : 'font-semibold text-terracotta'}>
             {total > 0 ? <><span className="font-semibold text-stone-800">{total}</span> 分钟</> : isExpanded ? '收起' : '添加'}
           </span>
           <svg
@@ -187,7 +188,7 @@ export function CategoryInput({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            className={isExpanded ? 'rotate-180' : ''}
             aria-hidden
           >
             <polyline points="6 9 12 15 18 9" />
@@ -195,7 +196,7 @@ export function CategoryInput({
         </span>
       </button>
 
-      {isExpanded && <div className="border-t border-cream-dark/60 pb-3.5 pt-3.5">
+      {isExpanded && <div className="border-t border-dashed border-terracotta/30 pb-3.5 pt-3.5">
       <div className="space-y-2.5">
         {rows.map((item, index) => {
           const minutesValue =
@@ -219,8 +220,9 @@ export function CategoryInput({
                 value={item.name}
                 onChange={(e) => updateItem(index, { name: e.target.value })}
                 placeholder={SUB_ITEM_PLACEHOLDERS[category]}
+                aria-label={`${CATEGORY_LABELS[category]}第 ${index + 1} 项任务名称`}
                 enterKeyHint="next"
-                className="min-h-11 min-w-0 rounded-xl border border-cream-dark bg-cream/45 px-3 py-2 text-base transition-[border-color,background-color,box-shadow] placeholder:text-stone-400 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-terracotta/15"
+                className="min-h-12 min-w-0 rounded-[10px] border border-terracotta/25 bg-calico px-3 py-2 text-base font-medium placeholder:text-stone-400 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
               />
               <div className="relative min-w-0">
                 <input
@@ -233,7 +235,7 @@ export function CategoryInput({
                   onBlur={() => handleMinutesBlur(index)}
                   placeholder="0"
                   aria-label="分钟"
-                  className="min-h-11 w-full rounded-xl border border-cream-dark bg-cream/45 py-2 pl-2 pr-6 text-center text-base tabular-nums transition-[border-color,background-color,box-shadow] placeholder:text-stone-400 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-terracotta/15"
+                  className="depot-display min-h-12 w-full rounded-[10px] border border-terracotta/25 bg-calico py-2 pl-2 pr-6 text-center text-base font-bold tabular-nums placeholder:text-stone-400 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
                 />
                 <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-stone-light">分</span>
               </div>
@@ -244,10 +246,10 @@ export function CategoryInput({
                   aria-label={isActive ? `查看「${taskName}」` : `为「${taskName}」计时`}
                   title={isActive ? '查看计时' : '开始计时'}
                   onClick={() => onQuickTimer(item)}
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/30 active:opacity-80 ${
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chrome-yellow active:opacity-80 ${
                     isActive
-                      ? 'bg-terracotta/15 text-terracotta'
-                      : 'text-stone-light hover:bg-terracotta/10 hover:text-terracotta'
+                      ? 'border-chrome-yellow bg-terracotta text-chrome-yellow'
+                      : 'border-terracotta/20 text-terracotta hover:bg-terracotta hover:text-chrome-yellow'
                   }`}
                 >
                   <TimerIcon active={isActive} />
@@ -258,9 +260,9 @@ export function CategoryInput({
                   aria-label="删除项目"
                   onClick={() => handleRemove(index)}
                   disabled={rows.length === 1 && !item.name && item.minutes === 0}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl text-stone-light transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/30 hover:bg-cream-dark hover:text-terracotta disabled:cursor-default disabled:opacity-30"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] text-stone-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chrome-yellow hover:bg-cream-dark hover:text-terracotta disabled:cursor-default disabled:opacity-30"
                 >
-                  ×
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5" /></svg>
                 </button>
               </div>
             </div>
@@ -271,9 +273,10 @@ export function CategoryInput({
       <button
         type="button"
         onClick={handleAdd}
-        className="mt-3 min-h-11 w-full rounded-xl border border-dashed border-stone-300 bg-cream/25 py-2 text-sm font-medium text-stone-light transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/30 hover:border-terracotta hover:bg-terracotta/5 hover:text-terracotta"
+        className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-[10px] border border-dashed border-terracotta/40 bg-calico py-2 text-sm font-bold text-terracotta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chrome-yellow hover:bg-cream-dark"
       >
-        + 添加项目
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
+        添加项目
       </button>
       </div>}
     </section>

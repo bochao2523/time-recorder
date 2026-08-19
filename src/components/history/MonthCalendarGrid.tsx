@@ -136,7 +136,7 @@ export function MonthCalendarGrid({ records, selectedDate, onDayClick }: MonthCa
               type="button"
               disabled={isFuture}
               onClick={() => handleCellClick(cell.date!)}
-              className={`relative flex aspect-square items-center justify-center rounded-[10px] text-sm font-medium transition-transform active:scale-95 disabled:cursor-default disabled:opacity-35 disabled:active:scale-100 ${
+              className={`relative flex aspect-square items-center justify-center rounded-[10px] text-sm font-medium disabled:cursor-default disabled:opacity-35 ${
                 isToday ? 'ring-2 ring-terracotta ring-offset-1' : ''
               } ${isSelected ? 'ring-2 ring-stone-800 ring-offset-1' : ''}`}
               style={{ backgroundColor: bg, color: text }}

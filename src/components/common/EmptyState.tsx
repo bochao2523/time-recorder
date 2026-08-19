@@ -17,7 +17,7 @@ export function EmptyState({ message = '还没有数据', actionLabel, onAction 
         <button
           type="button"
           onClick={onAction}
-          className="mt-4 min-h-11 rounded-full bg-terracotta px-5 text-sm font-semibold text-white shadow-[0_6px_18px_rgba(223,104,75,0.2)] active:scale-[0.97]"
+          className="mt-4 min-h-11 rounded-[10px] bg-chrome-yellow px-5 text-sm font-extrabold text-terracotta shadow-[0_6px_16px_rgba(8,43,34,0.12)] active:bg-[#e8bf00]"
         >
           {actionLabel}
         </button>
