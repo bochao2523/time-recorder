@@ -160,17 +160,16 @@ export function CategoryInput({
 
   return (
     <section
-      className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-l-4 border-cream-dark/70 bg-white px-3 shadow-[0_4px_18px_rgba(48,44,41,0.045)]"
-      style={{ borderLeftColor: color }}
+      className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl bg-white px-3.5 shadow-[0_8px_24px_rgba(45,41,38,0.065)] ring-1 ring-stone-800/[0.055] transition-[box-shadow,transform] hover:shadow-[0_12px_30px_rgba(45,41,38,0.09)] sm:px-4"
     >
       <button
         type="button"
         aria-expanded={isExpanded}
         onClick={() => setIsExpanded((expanded) => !expanded)}
-        className="flex min-h-14 w-full items-center justify-between gap-3 rounded-xl text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/30 active:scale-[0.985]"
+        className="flex min-h-16 w-full items-center justify-between gap-3 rounded-xl text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/30 active:scale-[0.99]"
       >
         <span className="flex min-w-0 items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: `${color}18`, color }}>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${color}16`, color }}>
             <CategoryIcon category={category} />
           </span>
           <span className="font-semibold text-stone-800">{CATEGORY_LABELS[category]}</span>
@@ -196,7 +195,7 @@ export function CategoryInput({
         </span>
       </button>
 
-      {isExpanded && <div className="border-t border-cream-dark/60 pb-3 pt-3">
+      {isExpanded && <div className="border-t border-cream-dark/60 pb-3.5 pt-3.5">
       <div className="space-y-2.5">
         {rows.map((item, index) => {
           const minutesValue =
@@ -221,7 +220,7 @@ export function CategoryInput({
                 onChange={(e) => updateItem(index, { name: e.target.value })}
                 placeholder={SUB_ITEM_PLACEHOLDERS[category]}
                 enterKeyHint="next"
-                className="min-h-11 min-w-0 rounded-xl border border-cream-dark bg-cream/30 px-3 py-2 text-base placeholder:text-stone-300 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-terracotta/20"
+                className="min-h-11 min-w-0 rounded-xl border border-cream-dark bg-cream/45 px-3 py-2 text-base transition-[border-color,background-color,box-shadow] placeholder:text-stone-400 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-terracotta/15"
               />
               <div className="relative min-w-0">
                 <input
@@ -234,7 +233,7 @@ export function CategoryInput({
                   onBlur={() => handleMinutesBlur(index)}
                   placeholder="0"
                   aria-label="分钟"
-                  className="min-h-11 w-full rounded-xl border border-cream-dark bg-cream/30 py-2 pl-2 pr-6 text-center text-base tabular-nums placeholder:text-stone-300 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-terracotta/20"
+                  className="min-h-11 w-full rounded-xl border border-cream-dark bg-cream/45 py-2 pl-2 pr-6 text-center text-base tabular-nums transition-[border-color,background-color,box-shadow] placeholder:text-stone-400 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-terracotta/15"
                 />
                 <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-stone-light">分</span>
               </div>
@@ -272,7 +271,7 @@ export function CategoryInput({
       <button
         type="button"
         onClick={handleAdd}
-        className="mt-3 min-h-11 w-full rounded-xl border border-dashed border-cream-dark py-2 text-sm text-stone-light transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/30 hover:border-terracotta hover:text-terracotta"
+        className="mt-3 min-h-11 w-full rounded-xl border border-dashed border-stone-300 bg-cream/25 py-2 text-sm font-medium text-stone-light transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta/30 hover:border-terracotta hover:bg-terracotta/5 hover:text-terracotta"
       >
         + 添加项目
       </button>

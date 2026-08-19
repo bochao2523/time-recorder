@@ -178,7 +178,7 @@ export function TodayPage() {
   }, [saveStatus])
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <PageCard className="bg-white/90">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 flex-1">
@@ -193,20 +193,20 @@ export function TodayPage() {
         </div>
       </PageCard>
 
-      <div className="relative overflow-hidden rounded-2xl bg-terracotta px-4 py-3.5 text-white shadow-[0_10px_30px_rgba(223,104,75,0.22)]">
-        <div className="absolute -right-5 -top-9 h-24 w-24 rounded-full bg-white/10" />
-        <div className="absolute -bottom-8 right-12 h-16 w-16 rounded-full bg-white/5" />
+      <div className="relative overflow-hidden rounded-2xl bg-terracotta px-5 py-4 text-white shadow-[0_14px_34px_rgba(217,95,67,0.25)] sm:px-6 sm:py-5">
+        <div className="absolute -right-8 -top-12 h-32 w-32 rounded-full border border-white/10 bg-white/[0.07]" />
+        <div className="absolute -bottom-14 right-20 h-24 w-24 rounded-full border border-white/[0.07]" />
         <div className="relative flex items-end justify-between gap-3">
           <div>
-            <p className="text-xs font-medium text-white/80">
-              {total > 0 ? '今天已经积累 ✨' : '从一个小任务开始吧'}
+            <p className="text-xs font-semibold text-white/80">
+              {total > 0 ? '今天已经积累' : '从一个小任务开始吧'}
             </p>
-            <p className="mt-0.5 text-2xl font-bold tracking-tight">{formatMinutes(total)}</p>
+            <p className="mt-1 text-3xl font-bold tracking-[-0.03em]">{formatMinutes(total)}</p>
           </div>
           <button
             type="button"
             onClick={openModal}
-            className="mb-0.5 flex min-h-10 items-center gap-1.5 rounded-full bg-white px-3.5 text-xs font-bold text-terracotta shadow-sm active:scale-[0.97]"
+            className="mb-0.5 flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-bold text-terracotta shadow-[0_7px_18px_rgba(117,45,30,0.16)] transition-transform hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 1.5M9 2h6" /></svg>
             开始计时
@@ -214,7 +214,7 @@ export function TodayPage() {
         </div>
       </div>
 
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         {CATEGORIES.map((cat) => (
           <CategoryInput
             key={cat}
