@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTimer } from '../../context/TimerContext'
-import { CATEGORIES, CATEGORY_LABELS, type Category } from '../../types'
-import { categoryColors } from '../../theme/colors'
+import { useCategories } from '../../context/useCategories'
+import type { Category } from '../../types'
 import {
   formatElapsed,
   MAX_TIMER_MS,
@@ -19,8 +19,9 @@ interface SessionTimerProps {
 
 export function SessionTimer({ onFinished }: SessionTimerProps) {
   const { session, displayMs, start, pause, resume, stop, discard, pushNotice } = useTimer()
+  const { activeCategories, getCategory } = useCategories()
   const [taskName, setTaskName] = useState('')
-  const [category, setCategory] = useState<Category>('study')
+  const [category, setCategory] = useState<Category>(() => activeCategories[0]?.id ?? 'study')
   const [mode, setMode] = useState<TimerMode>('stopwatch')
   const [durationMinutes, setDurationMinutes] = useState(25)
   /** 自定义输入展示：删光时为空，不强制显示 0 */
@@ -30,6 +31,11 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
     if (!session) return
     setTaskName('')
   }, [session])
+
+  useEffect(() => {
+    if (activeCategories.some((item) => item.id === category)) return
+    setCategory(activeCategories[0]?.id ?? 'study')
+  }, [activeCategories, category])
 
   const handleStart = () => {
     const name = taskName.trim()
@@ -69,7 +75,8 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
   }
 
   if (session) {
-    const color = categoryColors[session.category]
+    const definition = getCategory(session.category)
+    const color = definition.color
     const isPaused = session.status === 'paused'
     const isCountdown = session.mode === 'countdown'
     const totalLabel =
@@ -91,7 +98,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
         <h3 className="mt-2 truncate text-xl font-semibold text-stone-800">{session.taskName}</h3>
         <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm" style={{ color }}>
           <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-          {CATEGORY_LABELS[session.category]}
+          {definition.label}
           {totalLabel && <span className="text-stone-light">· {totalLabel}</span>}
         </p>
 
@@ -212,20 +219,19 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-stone-800">分类</p>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {CATEGORIES.map((cat) => {
-                  const color = categoryColors[cat]
-                  const active = category === cat
+                {activeCategories.map((definition) => {
+                  const active = category === definition.id
                   return (
                     <button
-                      key={cat}
+                      key={definition.id}
                       type="button"
-                      onClick={() => setCategory(cat)}
+                      onClick={() => setCategory(definition.id)}
                       className={`min-h-11 rounded-xl px-3 py-2.5 text-sm transition-colors ${
                         active ? 'text-white shadow-sm' : 'bg-cream text-stone-800 hover:bg-cream-dark'
                       }`}
-                      style={active ? { backgroundColor: color } : undefined}
+                      style={active ? { backgroundColor: definition.color } : undefined}
                     >
-                      {CATEGORY_LABELS[cat]}
+                      {definition.label}
                     </button>
                   )
                 })}

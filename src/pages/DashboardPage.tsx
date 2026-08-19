@@ -8,7 +8,8 @@ import { LineTrendChart } from '../components/charts/LineTrendChart'
 import { DonutChart } from '../components/charts/DonutChart'
 import { SubCategoryBarChart } from '../components/charts/SubCategoryBarChart'
 import { useRecords } from '../context/RecordsContext'
-import { CATEGORY_LABELS, CATEGORIES, type TimeRange } from '../types'
+import { useCategories } from '../context/useCategories'
+import type { TimeRange } from '../types'
 import {
   aggregateByCategory,
   aggregateSubItemsByCategory,
@@ -19,28 +20,45 @@ import {
   getRangeTotalMinutes,
 } from '../lib/stats'
 import { formatMinutes, today } from '../lib/dateUtils'
-import { categoryColors } from '../theme/colors'
 
 export function DashboardPage() {
   const navigate = useNavigate()
   const { records } = useRecords()
+  const { categories } = useCategories()
   const [range, setRange] = useState<TimeRange>({ preset: 'today', end: today() })
 
   const total = useMemo(() => getRangeTotalMinutes(records, range), [records, range])
   const dailyAvg = useMemo(() => getDailyAverage(records, range), [records, range])
   const currentStreak = useMemo(() => calcStreak(records), [records])
   const longestStreak = useMemo(() => calcLongestStreak(records), [records])
-  const byCategory = useMemo(() => aggregateByCategory(records, range), [records, range])
-  const chartData = useMemo(() => buildChartSeries(records, range), [records, range])
+  const allCategoryIds = useMemo(() => categories.map((category) => category.id), [categories])
+  const byCategory = useMemo(
+    () => aggregateByCategory(records, range, allCategoryIds),
+    [records, range, allCategoryIds],
+  )
+  const displayCategories = useMemo(
+    () => categories.filter((category) => category.active || (byCategory[category.id] ?? 0) > 0),
+    [categories, byCategory],
+  )
+  const displayCategoryIds = useMemo(
+    () => displayCategories.map((category) => category.id),
+    [displayCategories],
+  )
+  const chartData = useMemo(
+    () => buildChartSeries(records, range, displayCategoryIds),
+    [records, range, displayCategoryIds],
+  )
   const subItemsByCategory = useMemo(
-    () => aggregateSubItemsByCategory(records, range),
-    [records, range],
+    () => aggregateSubItemsByCategory(records, range, displayCategoryIds),
+    [records, range, displayCategoryIds],
   )
 
   const hasChartData = chartData.dates.some((_, i) =>
-    CATEGORIES.some((c) => chartData.series[c][i] > 0),
+    displayCategoryIds.some((category) => chartData.series[category][i] > 0),
   )
-  const categoriesWithSubItems = CATEGORIES.filter((cat) => subItemsByCategory[cat].length > 0)
+  const categoriesWithSubItems = displayCategories.filter(
+    (category) => subItemsByCategory[category.id]?.length > 0,
+  )
 
   return (
     <div className="space-y-3">
@@ -73,14 +91,14 @@ export function DashboardPage() {
           <h2 className="text-[15px] font-semibold text-stone-800">各类时间</h2>
         </div>
         <div className="divide-y divide-cream-dark/70">
-          {CATEGORIES.map((cat) => (
-            <div key={cat} className="flex min-h-11 items-center justify-between gap-3 py-2">
+          {displayCategories.map((category) => (
+            <div key={category.id} className="flex min-h-11 items-center justify-between gap-3 py-2">
               <span className="flex min-w-0 items-center gap-2.5 text-sm font-medium text-stone-800">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: categoryColors[cat] }} />
-                {CATEGORY_LABELS[cat]}
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: category.color }} />
+                {category.label}
               </span>
-              <span className="shrink-0 text-sm font-semibold tabular-nums" style={{ color: categoryColors[cat] }}>
-                {formatMinutes(byCategory[cat])}
+              <span className="shrink-0 text-sm font-semibold tabular-nums" style={{ color: category.color }}>
+                {formatMinutes(byCategory[category.id] ?? 0)}
               </span>
             </div>
           ))}
@@ -94,26 +112,26 @@ export function DashboardPage() {
       ) : <>
       {range.preset !== 'today' && (
         <ChartContainer title="时间趋势" isEmpty={!hasChartData} height={300}>
-          <LineTrendChart records={records} range={range} />
+          <LineTrendChart records={records} range={range} categories={displayCategories} />
         </ChartContainer>
       )}
 
       <ChartContainer title="时间分布" isEmpty={!hasChartData} height={300}>
-        <DonutChart records={records} range={range} />
+        <DonutChart records={records} range={range} categories={displayCategories} />
       </ChartContainer>
 
       {categoriesWithSubItems.length > 0 && <div>
         <h2 className="mb-3 px-1 text-[15px] font-semibold text-stone-800">任务排行</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {categoriesWithSubItems.map((cat) => (
+          {categoriesWithSubItems.map((category) => (
             <ChartContainer
-              key={`sub-bar-${cat}`}
-              title={`${CATEGORY_LABELS[cat]} · 项目排行`}
-              isEmpty={subItemsByCategory[cat].length === 0}
+              key={`sub-bar-${category.id}`}
+              title={`${category.label} · 项目排行`}
+              isEmpty={subItemsByCategory[category.id].length === 0}
               emptyMessage="还没有项目记录"
-              height={Math.max(180, subItemsByCategory[cat].length * 36 + 48)}
+              height={Math.max(180, subItemsByCategory[category.id].length * 36 + 48)}
             >
-              <SubCategoryBarChart category={cat} data={subItemsByCategory[cat]} />
+              <SubCategoryBarChart category={category} data={subItemsByCategory[category.id]} />
             </ChartContainer>
           ))}
         </div>

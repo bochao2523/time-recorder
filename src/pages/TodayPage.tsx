@@ -6,8 +6,6 @@ import { CategoryInput } from '../components/common/CategoryInput'
 import { useRecords } from '../context/RecordsContext'
 import { useTimer } from '../context/TimerContext'
 import {
-  CATEGORIES,
-  CATEGORY_LABELS,
   type Category,
   type CategorySubItem,
   type CategorySubItems,
@@ -21,6 +19,7 @@ import {
 } from '../lib/categoryItems'
 import { formatDisplayDate, formatMinutes, today } from '../lib/dateUtils'
 import { formatElapsed } from '../lib/timerStorage'
+import { useCategories } from '../context/useCategories'
 
 const AUTO_SAVE_DELAY_MS = 600
 const SAVED_HINT_DURATION_MS = 3000
@@ -57,6 +56,7 @@ export function TodayPage() {
   const [searchParams] = useSearchParams()
   const { records, getRecordByDate, upsertRecord, deleteRecord } = useRecords()
   const { session, displayMs, start, openModal, pause, resume, pushNotice } = useTimer()
+  const { activeCategories, getCategory } = useCategories()
 
   const initialDate = searchParams.get('date') ?? today()
   const [selectedDate, setSelectedDate] = useState(initialDate)
@@ -225,7 +225,7 @@ export function TodayPage() {
             </p>
           </div>
           <div className="grid shrink-0 grid-cols-2 gap-x-3 text-right text-[10px] font-bold leading-tight text-chrome-yellow/75 sm:text-xs">
-            <span>记录</span><span>{Object.values(subItems).flat().filter((item) => item.minutes > 0).length} 项</span>
+            <span>记录</span><span>{Object.values(subItems).flatMap((items) => items ?? []).filter((item) => item.minutes > 0).length} 项</span>
             <span>状态</span><span>{session ? '计时中' : '待开始'}</span>
           </div>
         </div>
@@ -237,7 +237,7 @@ export function TodayPage() {
             className="calico-surface stitched-light flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-[12px] px-3 text-sm font-extrabold text-terracotta active:bg-cream-dark"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" /></svg>
-            补记时间
+            <span className="leading-tight">手动记录<span className="mt-1 block text-xs font-semibold text-stone-light">填写已经花掉的时间</span></span>
           </button>
           <button
             type="button"
@@ -245,7 +245,7 @@ export function TodayPage() {
             className="calico-surface stitched-light flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-[12px] px-3 text-sm font-extrabold text-terracotta active:bg-cream-dark"
           >
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4V8Z" /></svg>
-            开始计时
+            <span className="leading-tight">开始计时<span className="mt-1 block text-xs font-semibold text-stone-light">从现在开始自动累计</span></span>
           </button>
         </div>
       </section>
@@ -253,7 +253,7 @@ export function TodayPage() {
       <section className="depot-cloth stitched-panel flex min-h-[5.5rem] items-center gap-3 overflow-hidden rounded-[14px] px-4 py-3" aria-label="当前计时">
         <div className="min-w-0 flex-1">
           <p className="depot-display text-xs font-extrabold tracking-[0.08em] text-chrome-yellow/80">
-            {session ? `${session.status === 'paused' ? '已暂停' : '正在计时'} · ${CATEGORY_LABELS[session.category]}` : '当前没有计时'}
+            {session ? `${session.status === 'paused' ? '已暂停' : '正在计时'} · ${getCategory(session.category).label}` : '当前没有计时'}
           </p>
           <p className="mt-1 truncate text-base font-bold text-chrome-yellow">
             {session?.taskName ?? '选择任务后开始一段专注时间'}
@@ -282,15 +282,15 @@ export function TodayPage() {
           <h2 className="text-base font-extrabold text-terracotta">任务记录</h2>
           <p className="ml-auto text-xs font-medium text-stone-light">修改后自动保存</p>
         </div>
-        {CATEGORIES.map((cat) => (
+        {activeCategories.map((definition) => (
           <CategoryInput
-            key={cat}
-            category={cat}
-            items={subItems[cat] ?? []}
-            onChange={(items) => handleSubItemsChange(cat, items)}
-            onQuickTimer={(item) => handleQuickTimer(cat, item)}
+            key={definition.id}
+            definition={definition}
+            items={subItems[definition.id] ?? []}
+            onChange={(items) => handleSubItemsChange(definition.id, items)}
+            onQuickTimer={(item) => handleQuickTimer(definition.id, item)}
             activeTaskName={
-              session?.category === cat ? session.taskName : null
+              session?.category === definition.id ? session.taskName : null
             }
           />
         ))}

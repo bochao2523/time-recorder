@@ -1,5 +1,23 @@
-export const CATEGORIES = ['study', 'meditation', 'exercise', 'reading', 'gaming'] as const
-export type Category = (typeof CATEGORIES)[number]
+export type Category = string
+
+export interface CategoryDefinition {
+  id: Category
+  label: string
+  color: string
+  active: boolean
+  builtin?: boolean
+}
+
+export const DEFAULT_CATEGORY_DEFINITIONS: readonly CategoryDefinition[] = [
+  { id: 'study', label: '学习', color: '#0E3A2E', active: true, builtin: true },
+  { id: 'meditation', label: '冥想', color: '#2F6B4F', active: true, builtin: true },
+  { id: 'exercise', label: '运动', color: '#B18F18', active: true, builtin: true },
+  { id: 'reading', label: '阅读', color: '#496859', active: true, builtin: true },
+  { id: 'gaming', label: '游戏', color: '#765F22', active: true, builtin: true },
+]
+
+/** 旧版默认大类；保留用于读取没有自定义配置的历史数据。 */
+export const CATEGORIES: readonly Category[] = DEFAULT_CATEGORY_DEFINITIONS.map((category) => category.id)
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   study: '学习',
@@ -40,12 +58,6 @@ export interface TimeRange {
 export type ImportMode = 'merge' | 'replace'
 
 /** 创建各类均为 0 的分钟对象 */
-export function createEmptyMinutes(): Record<Category, number> {
-  return {
-    study: 0,
-    meditation: 0,
-    exercise: 0,
-    reading: 0,
-    gaming: 0,
-  }
+export function createEmptyMinutes(categories: readonly Category[] = CATEGORIES): Record<Category, number> {
+  return Object.fromEntries(categories.map((category) => [category, 0]))
 }

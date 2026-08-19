@@ -1,11 +1,12 @@
 import { useTimer } from '../../context/TimerContext'
-import { CATEGORY_LABELS } from '../../types'
+import { useCategories } from '../../context/useCategories'
 import { formatElapsed } from '../../lib/timerStorage'
 import { useLocation } from 'react-router-dom'
 
 /** 弹层收起后，底部轻量条提醒计时仍在进行 */
 export function TimerFloatingBar() {
   const { session, displayMs, modalOpen, openModal, pause, resume, stop } = useTimer()
+  const { getCategory } = useCategories()
   const { pathname } = useLocation()
 
   if (!session || modalOpen || pathname === '/') return null
@@ -24,7 +25,7 @@ export function TimerFloatingBar() {
           <p className="truncate text-sm font-bold text-chrome-yellow">{session.taskName}</p>
           <p className="mt-0.5 flex items-center gap-1.5 text-xs text-chrome-yellow/75">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-chrome-yellow" />
-            {CATEGORY_LABELS[session.category]}
+            {getCategory(session.category).label}
             {isCountdown ? ' · 倒计时' : ''}
             {isPaused ? ' · 已暂停' : ' · 计时中'}
           </p>

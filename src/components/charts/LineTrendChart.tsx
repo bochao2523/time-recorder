@@ -1,7 +1,6 @@
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
-import type { DailyRecord, TimeRange } from '../../types'
-import { CATEGORY_LABELS, CATEGORIES } from '../../types'
+import type { CategoryDefinition, DailyRecord, TimeRange } from '../../types'
 import { buildChartSeries } from '../../lib/stats'
 import { formatShortDate } from '../../lib/dateUtils'
 import { baseTooltip, categoryLegend, chartCategoryColors } from '../../theme/chartTheme'
@@ -10,16 +9,18 @@ import { colors } from '../../theme/colors'
 interface LineTrendChartProps {
   records: DailyRecord[]
   range: TimeRange
+  categories: CategoryDefinition[]
 }
 
-export function LineTrendChart({ records, range }: LineTrendChartProps) {
-  const { dates, series } = buildChartSeries(records, range)
-  const hasData = dates.some((_, i) => CATEGORIES.some((c) => series[c][i] > 0))
+export function LineTrendChart({ records, range, categories }: LineTrendChartProps) {
+  const categoryIds = categories.map((category) => category.id)
+  const { dates, series } = buildChartSeries(records, range, categoryIds)
+  const hasData = dates.some((_, i) => categoryIds.some((category) => series[category][i] > 0))
 
   if (!hasData) return null
 
   const option: EChartsOption = {
-    color: chartCategoryColors,
+    color: chartCategoryColors(categories),
     tooltip: {
       ...baseTooltip,
       formatter: (params: unknown) => {
@@ -31,7 +32,7 @@ export function LineTrendChart({ records, range }: LineTrendChartProps) {
         return `${date}<br/>${lines.join('<br/>')}`
       },
     },
-    legend: categoryLegend(),
+    legend: categoryLegend(categories),
     grid: { left: 40, right: 16, top: 16, bottom: 48 },
     xAxis: {
       type: 'category',
@@ -46,13 +47,13 @@ export function LineTrendChart({ records, range }: LineTrendChartProps) {
       axisLabel: { color: colors.stoneLight, fontSize: 11 },
       splitLine: { lineStyle: { color: colors.creamDark } },
     },
-    series: CATEGORIES.map((cat) => ({
-      name: CATEGORY_LABELS[cat],
+    series: categories.map((category) => ({
+      name: category.label,
       type: 'line',
       smooth: true,
       symbol: 'circle',
       symbolSize: 6,
-      data: series[cat],
+      data: series[category.id],
     })),
   }
 

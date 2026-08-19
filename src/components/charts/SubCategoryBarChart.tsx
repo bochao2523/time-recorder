@@ -1,14 +1,13 @@
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
-import type { Category } from '../../types'
-import { CATEGORY_LABELS } from '../../types'
+import type { CategoryDefinition } from '../../types'
 import type { SubItemAggregate } from '../../lib/stats'
 import { formatMinutes } from '../../lib/dateUtils'
 import { subCategoryColors } from '../../theme/chartTheme'
-import { categoryColors, colors } from '../../theme/colors'
+import { colors } from '../../theme/colors'
 
 interface SubCategoryBarChartProps {
-  category: Category
+  category: CategoryDefinition
   data: SubItemAggregate[]
 }
 
@@ -16,7 +15,7 @@ export function SubCategoryBarChart({ category, data }: SubCategoryBarChartProps
   const chartData = [...data].filter((d) => d.minutes > 0).sort((a, b) => a.minutes - b.minutes)
   if (chartData.length === 0) return null
 
-  const baseColor = categoryColors[category]
+  const baseColor = category.color
   const palette = subCategoryColors(baseColor, chartData.length)
   const names = chartData.map((d) => d.name)
   const values = chartData.map((d) => d.minutes)
@@ -57,7 +56,7 @@ export function SubCategoryBarChart({ category, data }: SubCategoryBarChartProps
     },
     series: [
       {
-        name: CATEGORY_LABELS[category],
+        name: category.label,
         type: 'bar',
         data: values.map((value, i) => ({
           value,

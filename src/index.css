@@ -53,8 +53,12 @@ body {
   max-width: 100%;
   min-height: 100svh;
   background-color: var(--calico-deep);
-  background-image: url('./assets/depot-calico-cloth-texture.jpg');
-  background-size: 320px 320px;
+  background-image:
+    linear-gradient(90deg, rgba(14, 58, 46, 0.07), transparent 16%, transparent 84%, rgba(14, 58, 46, 0.07)),
+    linear-gradient(180deg, rgba(255, 210, 0, 0.055), transparent 22rem),
+    url('./assets/depot-calico-cloth-texture.jpg');
+  background-size: 100% 100%, 100% 32rem, 320px 320px;
+  background-attachment: fixed, fixed, fixed;
 }
 
 ::selection {

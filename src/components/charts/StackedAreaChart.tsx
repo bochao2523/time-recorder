@@ -1,7 +1,6 @@
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
-import type { DailyRecord, TimeRange } from '../../types'
-import { CATEGORY_LABELS, CATEGORIES } from '../../types'
+import type { CategoryDefinition, DailyRecord, TimeRange } from '../../types'
 import { buildChartSeries } from '../../lib/stats'
 import { formatShortDate } from '../../lib/dateUtils'
 import { baseTooltip, categoryLegend, chartCategoryColors } from '../../theme/chartTheme'
@@ -10,16 +9,18 @@ import { colors } from '../../theme/colors'
 interface StackedAreaChartProps {
   records: DailyRecord[]
   range: TimeRange
+  categories: CategoryDefinition[]
 }
 
-export function StackedAreaChart({ records, range }: StackedAreaChartProps) {
-  const { dates, series } = buildChartSeries(records, range)
-  const hasData = dates.some((_, i) => CATEGORIES.some((c) => series[c][i] > 0))
+export function StackedAreaChart({ records, range, categories }: StackedAreaChartProps) {
+  const categoryIds = categories.map((category) => category.id)
+  const { dates, series } = buildChartSeries(records, range, categoryIds)
+  const hasData = dates.some((_, i) => categoryIds.some((category) => series[category][i] > 0))
 
   if (!hasData) return null
 
   const option: EChartsOption = {
-    color: chartCategoryColors,
+    color: chartCategoryColors(categories),
     tooltip: {
       ...baseTooltip,
       formatter: (params: unknown) => {
@@ -32,7 +33,7 @@ export function StackedAreaChart({ records, range }: StackedAreaChartProps) {
         return `${date}<br/>${lines.join('<br/>')}<br/>合计: ${total} 分钟`
       },
     },
-    legend: categoryLegend(),
+    legend: categoryLegend(categories),
     grid: { left: 40, right: 16, top: 16, bottom: 48 },
     xAxis: {
       type: 'category',
@@ -47,13 +48,13 @@ export function StackedAreaChart({ records, range }: StackedAreaChartProps) {
       axisLabel: { color: colors.stoneLight, fontSize: 11 },
       splitLine: { lineStyle: { color: colors.creamDark } },
     },
-    series: CATEGORIES.map((cat) => ({
-      name: CATEGORY_LABELS[cat],
+    series: categories.map((category) => ({
+      name: category.label,
       type: 'line',
       stack: 'total',
       areaStyle: { opacity: 0.6 },
       emphasis: { focus: 'series' },
-      data: series[cat],
+      data: series[category.id],
     })),
   }
 

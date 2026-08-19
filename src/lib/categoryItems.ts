@@ -1,6 +1,5 @@
 import {
   CATEGORIES,
-  createEmptyMinutes,
   type Category,
   type CategorySubItem,
   type CategorySubItems,
@@ -13,9 +12,9 @@ export function sumSubItemMinutes(items: CategorySubItem[] | undefined): number 
 }
 
 export function minutesFromSubItems(subItems: CategorySubItems): Record<Category, number> {
-  const minutes = createEmptyMinutes()
-  for (const cat of CATEGORIES) {
-    minutes[cat] = sumSubItemMinutes(subItems[cat])
+  const minutes: Record<Category, number> = {}
+  for (const [cat, items] of Object.entries(subItems)) {
+    minutes[cat] = sumSubItemMinutes(items)
   }
   return minutes
 }
@@ -24,7 +23,14 @@ export function minutesFromSubItems(subItems: CategorySubItems): Record<Category
 export function subItemsFromRecord(record: DailyRecord): CategorySubItems {
   const result: CategorySubItems = {}
 
-  for (const cat of CATEGORIES) {
+  const categories = new Set([
+    ...CATEGORIES,
+    ...Object.keys(record.minutes ?? {}),
+    ...Object.keys(record.subItems ?? {}),
+    ...Object.keys(record.categoryNotes ?? {}),
+  ])
+
+  for (const cat of categories) {
     const existing = record.subItems?.[cat]
     if (existing?.length) {
       result[cat] = existing.map((item) => ({ ...item }))
@@ -49,8 +55,7 @@ export function createEmptySubItems(): CategorySubItems {
 export function normalizeSubItemsForSave(raw: CategorySubItems): CategorySubItems | undefined {
   const result: CategorySubItems = {}
 
-  for (const cat of CATEGORIES) {
-    const items = raw[cat]
+  for (const [cat, items] of Object.entries(raw)) {
     if (!items?.length) continue
 
     const cleaned = items

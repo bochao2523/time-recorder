@@ -1,6 +1,6 @@
 # 每日时间追踪
 
-纯本地、个人使用的每日时间追踪单页应用。记录学习、冥想、运动、看书四类时间，支持历史查看、数据可视化与 JSON 备份导入导出。
+纯本地、个人使用的每日时间追踪单页应用。支持手动填写、实时计时、自定义任务大类、历史查看、数据可视化与 JSON 备份导入导出。
 
 ## 技术栈
 
@@ -53,6 +53,8 @@ export default defineConfig({
 ## 数据存储
 
 - 所有记录保存在浏览器 `localStorage`（key: `time-tracker:records`）
+- 自定义大类保存在浏览器 `localStorage`（key: `time-tracker:categories`）
+- 删除大类只会将其从录入和计时界面隐藏，历史记录不会被清除，可在设置中恢复
 - 请在「设置」页定期导出 JSON 备份
 - 换浏览器或清除站点数据会导致记录丢失
 
@@ -63,4 +65,4 @@ export default defineConfig({
 | `#/` | 今日录入 |
 | `#/history` | 历史记录 + 热力图 |
 | `#/dashboard` | 数据可视化 |
-| `#/settings` | 导入 / 导出备份 |
+| `#/settings` | 管理任务大类、导入 / 导出备份 |

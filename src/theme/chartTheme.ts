@@ -1,9 +1,11 @@
 import type { EChartsOption } from 'echarts'
-import { CATEGORY_LABELS, CATEGORIES } from '../types'
-import { categoryColors, colors } from './colors'
+import type { CategoryDefinition } from '../types'
+import { colors } from './colors'
 
 /** ECharts 类别色序（与全局主题一致） */
-export const chartCategoryColors = CATEGORIES.map((cat) => categoryColors[cat])
+export function chartCategoryColors(categories: readonly CategoryDefinition[]): string[] {
+  return categories.map((category) => category.color)
+}
 
 /** 基础 tooltip 样式 */
 export const baseTooltip = {
@@ -17,9 +19,9 @@ export const baseTooltip = {
 }
 
 /** 折线图/面积图 legend */
-export function categoryLegend(): EChartsOption['legend'] {
+export function categoryLegend(categories: readonly CategoryDefinition[]): EChartsOption['legend'] {
   return {
-    data: CATEGORIES.map((c) => CATEGORY_LABELS[c]),
+    data: categories.map((category) => category.label),
     bottom: 0,
     textStyle: { color: colors.stoneLight },
   }

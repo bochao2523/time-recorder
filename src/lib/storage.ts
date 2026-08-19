@@ -1,5 +1,4 @@
-import type { Category, CategorySubItem, CategorySubItems, DailyRecord, ImportMode } from '../types'
-import { CATEGORIES, createEmptyMinutes } from '../types'
+import type { Category, CategoryDefinition, CategorySubItem, CategorySubItems, DailyRecord, ImportMode } from '../types'
 import { minutesFromSubItems, subItemsFromRecord } from './categoryItems'
 
 const STORAGE_KEY = 'time-tracker:records'
@@ -27,7 +26,7 @@ function validateSubItems(raw: unknown): raw is CategorySubItems {
   if (!raw || typeof raw !== 'object' || raw === null) return false
   const obj = raw as Record<string, unknown>
   for (const key of Object.keys(obj)) {
-    if (!CATEGORIES.includes(key as Category)) return false
+    if (!key.trim()) return false
     const items = obj[key]
     if (!Array.isArray(items)) return false
     if (!items.every(validateSubItem)) return false
@@ -42,10 +41,8 @@ export function validateRecord(raw: unknown): raw is DailyRecord {
   if (typeof r.date !== 'string' || !DATE_RE.test(r.date)) return false
   if (!r.minutes || typeof r.minutes !== 'object') return false
   const minutes = r.minutes as Record<string, unknown>
-  // 允许缺省新分类（如旧数据无 gaming），由 normalizeRecord 补 0
-  for (const cat of CATEGORIES) {
-    const v = minutes[cat]
-    if (v === undefined) continue
+  for (const [cat, v] of Object.entries(minutes)) {
+    if (!cat.trim()) return false
     if (typeof v !== 'number' || v < 0 || !Number.isInteger(v)) return false
   }
   if (r.note !== undefined && typeof r.note !== 'string') return false
@@ -54,7 +51,7 @@ export function validateRecord(raw: unknown): raw is DailyRecord {
     if (typeof r.categoryNotes !== 'object' || r.categoryNotes === null) return false
     const notes = r.categoryNotes as Record<string, unknown>
     for (const key of Object.keys(notes)) {
-      if (!CATEGORIES.includes(key as Category)) return false
+      if (!key.trim()) return false
       if (typeof notes[key] !== 'string') return false
     }
   }
@@ -64,8 +61,7 @@ export function validateRecord(raw: unknown): raw is DailyRecord {
 function normalizeSubItems(raw?: CategorySubItems): CategorySubItems | undefined {
   if (!raw || typeof raw !== 'object') return undefined
   const result: CategorySubItems = {}
-  for (const cat of CATEGORIES) {
-    const items = raw[cat]
+  for (const [cat, items] of Object.entries(raw)) {
     if (!items?.length) continue
     const cleaned = items
       .map((item) => ({
@@ -84,8 +80,8 @@ function normalizeSubItems(raw?: CategorySubItems): CategorySubItems | undefined
 /** 规范化记录（补齐缺失字段） */
 export function normalizeRecord(raw: DailyRecord): DailyRecord {
   const subItems = normalizeSubItems(subItemsFromRecord(raw))
-  const minutes = subItems ? minutesFromSubItems(subItems) : createEmptyMinutes()
-  for (const cat of CATEGORIES) {
+  const minutes = subItems ? minutesFromSubItems(subItems) : {}
+  for (const cat of Object.keys(raw.minutes)) {
     if (!subItems?.[cat]?.length) {
       minutes[cat] = raw.minutes[cat] ?? 0
     }
@@ -138,9 +134,15 @@ export function getRecordByDate(records: DailyRecord[], date: string): DailyReco
 }
 
 /** 解析导入 JSON 字符串 */
-export function parseImportJson(json: string): DailyRecord[] {
+export interface ParsedImport {
+  records: DailyRecord[]
+  categories?: CategoryDefinition[]
+}
+
+export function parseImportJson(json: string): ParsedImport {
   const parsed: unknown = JSON.parse(json)
   let arr: unknown[]
+  let categories: CategoryDefinition[] | undefined
   if (Array.isArray(parsed)) {
     arr = parsed
   } else if (
@@ -150,12 +152,14 @@ export function parseImportJson(json: string): DailyRecord[] {
     Array.isArray((parsed as { records: unknown }).records)
   ) {
     arr = (parsed as { records: unknown[] }).records
+    const rawCategories = (parsed as { categories?: unknown }).categories
+    if (Array.isArray(rawCategories)) categories = rawCategories as CategoryDefinition[]
   } else {
     throw new Error('这个文件不是有效的备份')
   }
   const valid = arr.filter(validateRecord).map(normalizeRecord)
   if (valid.length === 0) throw new Error('备份中没有可导入的记录')
-  return valid
+  return { records: valid, categories }
 }
 
 /** 合并或替换导入数据 */
@@ -174,10 +178,11 @@ export function importRecords(
 }
 
 /** 触发 JSON 文件下载 */
-export function downloadRecords(records: DailyRecord[]): void {
+export function downloadRecords(records: DailyRecord[], categories?: CategoryDefinition[]): void {
   const payload = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
+    categories,
     records,
   }
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })

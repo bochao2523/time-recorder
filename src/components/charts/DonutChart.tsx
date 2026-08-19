@@ -1,28 +1,27 @@
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
-import type { DailyRecord, TimeRange } from '../../types'
-import { CATEGORY_LABELS, CATEGORIES } from '../../types'
+import type { CategoryDefinition, DailyRecord, TimeRange } from '../../types'
 import { aggregateByCategory } from '../../lib/stats'
 import { formatMinutes } from '../../lib/dateUtils'
-import { chartCategoryColors } from '../../theme/chartTheme'
 import { colors } from '../../theme/colors'
 
 interface DonutChartProps {
   records: DailyRecord[]
   range: TimeRange
+  categories: CategoryDefinition[]
 }
 
-export function DonutChart({ records, range }: DonutChartProps) {
-  const totals = aggregateByCategory(records, range)
-  const data = CATEGORIES.map((cat) => ({
-    name: CATEGORY_LABELS[cat],
-    value: totals[cat],
+export function DonutChart({ records, range, categories }: DonutChartProps) {
+  const totals = aggregateByCategory(records, range, categories.map((category) => category.id))
+  const data = categories.map((category) => ({
+    name: category.label,
+    value: totals[category.id],
   })).filter((d) => d.value > 0)
 
   if (data.length === 0) return null
 
   const option: EChartsOption = {
-    color: chartCategoryColors,
+    color: categories.map((category) => category.color),
     tooltip: {
       trigger: 'item',
       backgroundColor: '#fff',

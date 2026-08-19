@@ -1,4 +1,4 @@
-import { CATEGORIES, type Category } from '../types'
+import type { Category } from '../types'
 
 export const TIMER_STORAGE_KEY = 'time-tracker:active-timer'
 export const PENDING_COMPLETE_KEY = 'time-tracker:pending-complete'
@@ -29,7 +29,7 @@ export interface ActiveTimerSession {
 }
 
 function isCategory(value: unknown): value is Category {
-  return typeof value === 'string' && (CATEGORIES as readonly string[]).includes(value)
+  return typeof value === 'string' && value.trim().length > 0
 }
 
 function isTimerMode(value: unknown): value is TimerMode {

@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import type { Category, CategorySubItem } from '../../types'
-import { CATEGORY_LABELS } from '../../types'
+import type { Category, CategoryDefinition, CategorySubItem } from '../../types'
 import { sumSubItemMinutes } from '../../lib/categoryItems'
 
 interface CategoryInputProps {
-  category: Category
+  definition: CategoryDefinition
   items: CategorySubItem[]
   onChange: (items: CategorySubItem[]) => void
   /** 快捷继续计时（有任务名的行显示） */
@@ -13,7 +12,7 @@ interface CategoryInputProps {
   activeTaskName?: string | null
 }
 
-const SUB_ITEM_PLACEHOLDERS: Record<Category, string> = {
+const SUB_ITEM_PLACEHOLDERS: Record<string, string> = {
   study: '如数学、英语',
   meditation: '如正念、呼吸',
   exercise: '如跑步、游泳',
@@ -58,7 +57,7 @@ function TimerIcon({ active }: { active?: boolean }) {
   )
 }
 
-function CategoryIcon({ category }: { category: Category }) {
+function CategoryIcon({ category, label }: { category: Category; label: string }) {
   const common = {
     width: 19,
     height: 19,
@@ -82,16 +81,22 @@ function CategoryIcon({ category }: { category: Category }) {
       return <svg {...common}><path d="M3 5.5A3.5 3.5 0 0 1 6.5 2H11v17H6.5A3.5 3.5 0 0 0 3 22V5.5ZM21 5.5A3.5 3.5 0 0 0 17.5 2H13v17h4.5A3.5 3.5 0 0 1 21 22V5.5Z" /></svg>
     case 'gaming':
       return <svg {...common}><path d="M8.5 8h7a5.5 5.5 0 0 1 5.3 7l-1 3.3a2 2 0 0 1-3.2 1l-2.1-1.8h-5l-2.1 1.8a2 2 0 0 1-3.2-1L3.2 15a5.5 5.5 0 0 1 5.3-7Z" /><path d="M7 12v4M5 14h4M16.5 13h.01M18.5 15h.01" /></svg>
+    default:
+      if (/[琴乐歌唱鼓笛]/.test(label)) {
+        return <svg {...common}><path d="M9 18V5l10-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="16" cy="16" r="3" /></svg>
+      }
+      return <svg {...common}><path d="M4 6.5h6l2 2h8v10.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6.5Z" /><path d="M4 11h16" /></svg>
   }
 }
 
 export function CategoryInput({
-  category,
+  definition,
   items,
   onChange,
   onQuickTimer,
   activeTaskName,
 }: CategoryInputProps) {
+  const { id: category, label, color } = definition
   const rows = displayItems(items)
   const total = sumSubItemMinutes(items)
   const [isExpanded, setIsExpanded] = useState(items.length > 0)
@@ -167,11 +172,11 @@ export function CategoryInput({
         className="flex min-h-[4.5rem] w-full items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-chrome-yellow"
       >
         <span className="flex min-w-0 items-center gap-2">
-          <span className="depot-cloth flex h-11 w-11 items-center justify-center rounded-[10px] text-chrome-yellow">
-            <CategoryIcon category={category} />
+          <span className="flex h-11 w-11 items-center justify-center rounded-[10px] text-calico shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]" style={{ backgroundColor: color }}>
+            <CategoryIcon category={category} label={label} />
           </span>
           <span>
-            <span className="block font-extrabold text-terracotta">{CATEGORY_LABELS[category]}</span>
+            <span className="block font-extrabold text-terracotta">{label}</span>
             <span className="block text-[11px] font-medium text-stone-light">{items.length > 0 ? `${items.length} 个项目` : '还没有项目'}</span>
           </span>
         </span>
@@ -219,8 +224,8 @@ export function CategoryInput({
                 type="text"
                 value={item.name}
                 onChange={(e) => updateItem(index, { name: e.target.value })}
-                placeholder={SUB_ITEM_PLACEHOLDERS[category]}
-                aria-label={`${CATEGORY_LABELS[category]}第 ${index + 1} 项任务名称`}
+                placeholder={SUB_ITEM_PLACEHOLDERS[category] ?? `如${label}的具体项目`}
+                aria-label={`${label}第 ${index + 1} 项任务名称`}
                 enterKeyHint="next"
                 className="min-h-12 min-w-0 rounded-[10px] border border-terracotta/25 bg-calico px-3 py-2 text-base font-medium placeholder:text-stone-400 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
               />

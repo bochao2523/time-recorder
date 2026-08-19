@@ -1,6 +1,5 @@
 import dayjs from 'dayjs'
 import type { Category, DailyRecord, TimeRange } from '../types'
-import { CATEGORIES } from '../types'
 import { subItemsFromRecord } from './categoryItems'
 import {
   countCalendarDays,
@@ -19,7 +18,7 @@ function earliestDate(records: DailyRecord[]): string | undefined {
 /** 单条记录各类合计分钟 */
 export function getTotalMinutes(record: DailyRecord | Record<Category, number>): number {
   const minutes = 'minutes' in record ? record.minutes : record
-  return CATEGORIES.reduce((sum, cat) => sum + (minutes[cat] ?? 0), 0)
+  return Object.values(minutes).reduce((sum, value) => sum + (value ?? 0), 0)
 }
 
 /** 按时间范围筛选记录 */
@@ -97,18 +96,13 @@ export function calcLongestStreak(records: DailyRecord[]): number {
 export function aggregateByCategory(
   records: DailyRecord[],
   range: TimeRange,
+  categories: readonly Category[],
 ): Record<Category, number> {
   const filtered = filterByRange(records, range)
-  const result = {
-    study: 0,
-    meditation: 0,
-    exercise: 0,
-    reading: 0,
-    gaming: 0,
-  } as Record<Category, number>
+  const result = Object.fromEntries(categories.map((category) => [category, 0])) as Record<Category, number>
   for (const r of filtered) {
-    for (const cat of CATEGORIES) {
-      result[cat] += r.minutes[cat]
+    for (const cat of categories) {
+      result[cat] += r.minutes[cat] ?? 0
     }
   }
   return result
@@ -120,13 +114,17 @@ export interface ChartSeriesData {
   series: Record<Category, number[]>
 }
 
-export function buildChartSeries(records: DailyRecord[], range: TimeRange): ChartSeriesData {
+export function buildChartSeries(
+  records: DailyRecord[],
+  range: TimeRange,
+  categories: readonly Category[],
+): ChartSeriesData {
   const { start, end } = resolveRangeBounds(range, earliestDate(records))
   const dates = dateRange(start, end)
   const map = new Map(records.map((r) => [r.date, r]))
 
   const series = {} as Record<Category, number[]>
-  for (const cat of CATEGORIES) {
+  for (const cat of categories) {
     series[cat] = dates.map((d) => map.get(d)?.minutes[cat] ?? 0)
   }
   return { dates, series }
@@ -146,15 +144,16 @@ export interface SubItemAggregate {
 export function aggregateSubItemsByCategory(
   records: DailyRecord[],
   range: TimeRange,
+  categories: readonly Category[],
 ): Record<Category, SubItemAggregate[]> {
   const filtered = filterByRange(records, range)
   const maps = Object.fromEntries(
-    CATEGORIES.map((cat) => [cat, new Map<string, number>()]),
+    categories.map((cat) => [cat, new Map<string, number>()]),
   ) as Record<Category, Map<string, number>>
 
   for (const record of filtered) {
     const subItems = subItemsFromRecord(record)
-    for (const cat of CATEGORIES) {
+    for (const cat of categories) {
       for (const item of subItems[cat] ?? []) {
         if (item.minutes <= 0) continue
         const name = item.name.trim() || '未命名'
@@ -165,7 +164,7 @@ export function aggregateSubItemsByCategory(
   }
 
   const result = {} as Record<Category, SubItemAggregate[]>
-  for (const cat of CATEGORIES) {
+  for (const cat of categories) {
     result[cat] = Array.from(maps[cat].entries())
       .map(([name, minutes]) => ({ name, minutes }))
       .sort((a, b) => b.minutes - a.minutes)

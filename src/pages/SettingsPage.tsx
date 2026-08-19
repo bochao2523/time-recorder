@@ -2,14 +2,17 @@ import { useRef, useState } from 'react'
 import { PageCard } from '../components/layout/Layout'
 import { Toast } from '../components/common/Toast'
 import { useRecords } from '../context/RecordsContext'
+import { useCategories } from '../context/useCategories'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { ImportMode } from '../types'
 
 export function SettingsPage() {
   const { records, exportRecords, importRecords } = useRecords()
+  const { activeCategories, archivedCategories, addCategory, removeCategory, restoreCategory } = useCategories()
   const fileRef = useRef<HTMLInputElement>(null)
   const [pendingJson, setPendingJson] = useState<string | null>(null)
   const [importMode, setImportMode] = useState<ImportMode>('merge')
+  const [categoryName, setCategoryName] = useState('')
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' }>({
     visible: false,
     message: '',
@@ -43,6 +46,22 @@ export function SettingsPage() {
     setPendingJson(null)
   }
 
+  const handleAddCategory = () => {
+    const result = addCategory(categoryName)
+    showToast(result.message, result.ok ? 'success' : 'error')
+    if (result.ok) setCategoryName('')
+  }
+
+  const handleRemoveCategory = (id: string) => {
+    const result = removeCategory(id)
+    showToast(result.message, result.ok ? 'success' : 'error')
+  }
+
+  const handleRestoreCategory = (id: string) => {
+    const result = restoreCategory(id)
+    showToast(result.message, result.ok ? 'success' : 'error')
+  }
+
   return (
     <div className="space-y-3">
       <Toast
@@ -63,6 +82,76 @@ export function SettingsPage() {
           </div>
         </div>
       </section>
+
+      <PageCard>
+        <div className="mb-4">
+          <h2 className="text-base font-extrabold text-stone-800">任务大类</h2>
+          <p className="mt-1 text-xs leading-relaxed text-stone-light">决定“今天”和计时器里显示哪些大类。删除不会清掉过去的记录。</p>
+        </div>
+
+        <div className="space-y-2" aria-label="正在使用的任务大类">
+          {activeCategories.map((category) => (
+            <div key={category.id} className="flex min-h-12 items-center gap-3 rounded-[10px] border border-terracotta/18 bg-calico px-3">
+              <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: category.color }} aria-hidden />
+              <span className="min-w-0 flex-1 truncate text-sm font-bold text-stone-800">{category.label}</span>
+              <button
+                type="button"
+                onClick={() => handleRemoveCategory(category.id)}
+                disabled={activeCategories.length <= 1}
+                className="min-h-11 shrink-0 rounded-[10px] px-3 text-sm font-bold text-stone-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chrome-yellow active:bg-cream-dark disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label={`删除大类「${category.label}」`}
+              >
+                删除
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 border-t border-dashed border-terracotta/25 pt-4">
+          <label htmlFor="new-category-name" className="text-sm font-bold text-stone-800">添加新大类</label>
+          <div className="mt-2 grid grid-cols-[minmax(0,1fr)_5.5rem] gap-2">
+            <input
+              id="new-category-name"
+              type="text"
+              value={categoryName}
+              maxLength={12}
+              enterKeyHint="done"
+              onChange={(event) => setCategoryName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') handleAddCategory()
+              }}
+              placeholder="例如：弹琴"
+              className="min-h-12 min-w-0 rounded-[10px] border border-terracotta/25 bg-calico px-3 text-base font-medium text-stone-800 placeholder:text-stone-400 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
+            />
+            <button
+              type="button"
+              onClick={handleAddCategory}
+              className="min-h-12 rounded-[10px] bg-chrome-yellow px-3 text-sm font-extrabold text-terracotta active:bg-[#e8bf00]"
+            >
+              添加
+            </button>
+          </div>
+        </div>
+
+        {archivedCategories.length > 0 && (
+          <div className="mt-4 border-t border-dashed border-terracotta/25 pt-4">
+            <p className="text-xs font-bold text-stone-light">已删除 · 历史数据仍保留</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {archivedCategories.map((category) => (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => handleRestoreCategory(category.id)}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-terracotta/20 bg-calico px-3 text-sm font-bold text-terracotta active:bg-cream-dark"
+                >
+                  <span className="h-2.5 w-2.5 rounded-full opacity-60" style={{ backgroundColor: category.color }} aria-hidden />
+                  恢复 {category.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </PageCard>
 
       <PageCard>
         <div className="mb-4 flex items-center justify-between gap-3">

@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { DailyRecord, ImportMode } from '../types'
+import { useCategories } from './useCategories'
 import {
   deleteRecord as deleteRecordStorage,
   downloadRecords,
@@ -31,6 +32,7 @@ interface RecordsContextValue {
 const RecordsContext = createContext<RecordsContextValue | null>(null)
 
 export function RecordsProvider({ children }: { children: ReactNode }) {
+  const { categories, importCategoryDefinitions } = useCategories()
   const [records, setRecords] = useState<DailyRecord[]>(() => loadRecords())
 
   const upsertRecord = useCallback((record: DailyRecord) => {
@@ -60,19 +62,20 @@ export function RecordsProvider({ children }: { children: ReactNode }) {
 
   const exportRecords = useCallback(() => {
     setRecords((prev) => {
-      downloadRecords(prev)
+      downloadRecords(prev, categories)
       return prev
     })
-  }, [])
+  }, [categories])
 
   const importRecords = useCallback((json: string, mode: ImportMode) => {
     const imported = parseImportJson(json)
+    if (imported.categories?.length) importCategoryDefinitions(imported.categories)
     setRecords((prev) => {
-      const next = importRecordsStorage(prev, imported, mode)
+      const next = importRecordsStorage(prev, imported.records, mode)
       saveRecords(next)
       return next
     })
-  }, [])
+  }, [importCategoryDefinitions])
 
   const value = useMemo(
     () => ({

@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CATEGORY_LABELS, CATEGORIES, type Category, type DailyRecord } from '../../types'
+import type { Category, DailyRecord } from '../../types'
 import { formatCategoryCell } from '../../lib/categoryItems'
 import { formatDisplayDate } from '../../lib/dateUtils'
 import { getTotalMinutes } from '../../lib/stats'
-import { categoryColors } from '../../theme/colors'
+import { useCategories } from '../../context/useCategories'
 import { EmptyState } from '../common/EmptyState'
 
 interface HistoryTableProps {
@@ -32,16 +32,22 @@ function DeleteIcon() {
 }
 
 function CategoryTags({ record }: { record: DailyRecord }) {
+  const { categories, getCategory } = useCategories()
   const tags: { key: string; category: Category; label: string; minutes: number }[] = []
+  const categoryIds = [
+    ...categories.map((category) => category.id),
+    ...Object.keys(record.minutes).filter((id) => !categories.some((category) => category.id === id)),
+  ]
 
-  for (const cat of CATEGORIES) {
+  for (const cat of categoryIds) {
+    const definition = getCategory(cat)
     const items = record.subItems?.[cat]?.filter((item) => item.minutes > 0)
     if (items?.length) {
       for (const item of items) {
         tags.push({
           key: `${cat}-${item.name}-${item.minutes}`,
           category: cat,
-          label: item.name || CATEGORY_LABELS[cat],
+          label: item.name || definition.label,
           minutes: item.minutes,
         })
       }
@@ -51,7 +57,7 @@ function CategoryTags({ record }: { record: DailyRecord }) {
       tags.push({
         key: cat,
         category: cat,
-        label: CATEGORY_LABELS[cat],
+        label: definition.label,
         minutes: record.minutes[cat],
       })
     }
@@ -70,7 +76,7 @@ function CategoryTags({ record }: { record: DailyRecord }) {
         >
           <span
             className="h-2 w-2 shrink-0 rounded-full"
-            style={{ backgroundColor: categoryColors[tag.category] }}
+            style={{ backgroundColor: getCategory(tag.category).color }}
           />
           {tag.label}
           <span className="text-stone-light">{tag.minutes}分</span>
@@ -106,7 +112,22 @@ function ActionButtons({ date, onDelete }: { date: string; onDelete: (date: stri
 
 export function HistoryTable({ records, highlightDate, onDelete }: HistoryTableProps) {
   const navigate = useNavigate()
+  const { categories, getCategory } = useCategories()
   const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date))
+  const tableCategories = useMemo(() => {
+    const unknownIds = Array.from(new Set(
+      records.flatMap((record) => Object.keys(record.minutes)).filter(
+        (id) => !categories.some((category) => category.id === id),
+      ),
+    ))
+    const complete = [
+      ...categories,
+      ...unknownIds.map((id) => getCategory(id)),
+    ]
+    return complete.filter((category) => (
+      category.active || records.some((record) => (record.minutes[category.id] ?? 0) > 0)
+    ))
+  }, [records, categories, getCategory])
   const highlightRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -133,9 +154,9 @@ export function HistoryTable({ records, highlightDate, onDelete }: HistoryTableP
           <thead>
             <tr className="border-b border-cream-dark text-left text-sm text-stone-light">
               <th className="pb-3 pr-3 font-medium">日期</th>
-              {CATEGORIES.map((c) => (
-                <th key={c} className="pb-3 pr-3 font-medium">
-                  {CATEGORY_LABELS[c]}
+              {tableCategories.map((category) => (
+                <th key={category.id} className="pb-3 pr-3 font-medium">
+                  {category.label}
                 </th>
               ))}
               <th className="pb-3 pr-3 font-medium">合计</th>
@@ -152,9 +173,9 @@ export function HistoryTable({ records, highlightDate, onDelete }: HistoryTableP
                 }`}
               >
                 <td className="py-3 pr-3 whitespace-nowrap">{formatDisplayDate(r.date)}</td>
-                {CATEGORIES.map((c) => (
-                  <td key={c} className="max-w-[140px] py-3 pr-3 text-sm">
-                    <span className="line-clamp-2">{formatCategoryCell(r, c)}</span>
+                {tableCategories.map((category) => (
+                  <td key={category.id} className="max-w-[140px] py-3 pr-3 text-sm">
+                    <span className="line-clamp-2">{formatCategoryCell(r, category.id)}</span>
                   </td>
                 ))}
                 <td className="py-3 pr-3 font-medium">{getTotalMinutes(r)}</td>

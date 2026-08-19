@@ -1,14 +1,15 @@
 import { useTimer } from '../../context/TimerContext'
 import { formatElapsed } from '../../lib/timerStorage'
-import { CATEGORY_LABELS } from '../../types'
-import { categoryColors } from '../../theme/colors'
+import { useCategories } from '../../context/useCategories'
 
 /** 顶栏入口：打开计时弹层；进行中时显示当前时长 */
 export function TimerHeaderButton({ hideIdle = false }: { hideIdle?: boolean }) {
   const { session, displayMs, openModal } = useTimer()
+  const { getCategory } = useCategories()
 
   if (session) {
-    const color = categoryColors[session.category]
+    const definition = getCategory(session.category)
+    const color = definition.color
     const isPaused = session.status === 'paused'
     const isCountdown = session.mode === 'countdown'
 
@@ -28,7 +29,7 @@ export function TimerHeaderButton({ hideIdle = false }: { hideIdle?: boolean }) 
               {isCountdown ? '剩 ' : ''}
               {formatElapsed(displayMs)}
             </span>
-            <span style={{ color: color === '#0e3a2e' ? undefined : color }}>· {CATEGORY_LABELS[session.category]}</span>
+            <span style={{ color: color.toLowerCase() === '#0e3a2e' ? undefined : color }}>· {definition.label}</span>
           </span>
         </span>
       </button>
