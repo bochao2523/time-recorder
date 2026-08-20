@@ -159,6 +159,39 @@ export function TodayPage() {
     [session, start, openModal, pushNotice, selectedDate],
   )
 
+  /** 无需填写小类，直接按大类开始正计时 */
+  const handleCategoryTimer = useCallback(
+    (cat: Category) => {
+      const label = getCategory(cat).label
+
+      if (
+        session &&
+        session.category === cat &&
+        session.taskName.trim() === label
+      ) {
+        openModal()
+        return
+      }
+
+      if (session) {
+        pushNotice({
+          message: `「${session.taskName}」正在计时`,
+          type: 'error',
+        })
+        openModal()
+        return
+      }
+
+      const ok = start(label, cat, { date: selectedDate, mode: 'stopwatch' })
+      if (!ok) {
+        pushNotice({ message: '计时未开始，请重试', type: 'error' })
+        return
+      }
+      openModal()
+    },
+    [getCategory, session, start, openModal, pushNotice, selectedDate],
+  )
+
   const markSaved = useCallback(() => {
     setSaveStatus('saved')
   }, [])
@@ -254,7 +287,7 @@ export function TodayPage() {
             className="calico-surface stitched-light flex min-h-16 w-full items-center justify-center gap-3 rounded-[12px] px-4 text-left text-sm font-extrabold text-terracotta active:bg-cream-dark"
           >
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4V8Z" /></svg>
-            <span className="leading-tight">开始计时<span className="mt-1 block text-xs font-semibold text-stone-light">选择任务后从现在开始累计</span></span>
+            <span className="leading-tight">开始计时<span className="mt-1 block text-xs font-semibold text-stone-light">选择大类即可，具体项目可不填</span></span>
           </button>
           <span className="depot-eyelet absolute -bottom-1 -right-1 scale-75" aria-hidden />
         </div>
@@ -266,7 +299,7 @@ export function TodayPage() {
             {session ? `${session.status === 'paused' ? '已暂停' : '正在计时'} · ${getCategory(session.category).label}` : '当前没有计时'}
           </p>
           <p className="mt-1 truncate text-base font-bold text-chrome-yellow">
-            {session?.taskName ?? '选择任务后开始一段专注时间'}
+            {session?.taskName ?? '选择一个大类，马上开始计时'}
           </p>
         </div>
         <p className="stable-timer-slot depot-display shrink-0 text-right text-2xl font-extrabold tracking-[0.04em] text-chrome-yellow">
@@ -290,7 +323,7 @@ export function TodayPage() {
         <div className="flex items-center gap-2 px-1 pb-0.5 pt-1">
           <span className="depot-eyelet" aria-hidden />
           <h2 className="text-base font-extrabold text-terracotta">今日任务</h2>
-          <p className="ml-auto text-xs font-medium text-stone-light">点开大类直接填写分钟</p>
+          <p className="ml-auto text-xs font-medium text-stone-light">点计时直接开始 · 点卡片添加项目</p>
         </div>
         {activeCategories.map((definition) => (
           <CategoryInput
@@ -299,6 +332,11 @@ export function TodayPage() {
             items={subItems[definition.id] ?? []}
             onChange={(items) => handleSubItemsChange(definition.id, items)}
             onQuickTimer={(item) => handleQuickTimer(definition.id, item)}
+            onCategoryTimer={() => handleCategoryTimer(definition.id)}
+            categoryTimerActive={
+              session?.category === definition.id &&
+              session.taskName.trim() === definition.label
+            }
             activeTaskName={
               session?.category === definition.id ? session.taskName : null
             }

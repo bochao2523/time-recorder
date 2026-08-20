@@ -110,7 +110,7 @@ export function TimerModal() {
             <p className="mt-0.5 text-xs text-stone-light">
               {session
                 ? '收起后仍会继续'
-                : '填写任务，选择计时方式'}
+                : '选择大类即可，具体项目可不填'}
             </p>
           </div>
           <button

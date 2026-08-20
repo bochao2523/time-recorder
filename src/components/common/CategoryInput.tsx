@@ -10,6 +10,10 @@ interface CategoryInputProps {
   onQuickTimer?: (item: CategorySubItem) => void
   /** 当前正在计时的任务名（同分类下高亮） */
   activeTaskName?: string | null
+  /** 不填写小类，直接为整个大类计时 */
+  onCategoryTimer?: () => void
+  /** 当前是否正在为整个大类计时 */
+  categoryTimerActive?: boolean
 }
 
 const SUB_ITEM_PLACEHOLDERS: Record<string, string> = {
@@ -95,6 +99,8 @@ export function CategoryInput({
   onChange,
   onQuickTimer,
   activeTaskName,
+  onCategoryTimer,
+  categoryTimerActive = false,
 }: CategoryInputProps) {
   const { id: category, label, color } = definition
   const rows = displayItems(items)
@@ -161,41 +167,60 @@ export function CategoryInput({
     <section
       className="calico-surface stitched-light w-full min-w-0 max-w-full overflow-hidden rounded-[14px] px-3.5 sm:px-4"
     >
-      <button
-        type="button"
-        aria-expanded={isExpanded}
-        onClick={() => setIsExpanded((expanded) => !expanded)}
-        className="flex min-h-[4.5rem] w-full items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-chrome-yellow"
-      >
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="flex h-11 w-11 items-center justify-center rounded-[10px] text-calico shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]" style={{ backgroundColor: color }}>
-            <CategoryIcon category={category} label={label} />
+      <div className="flex min-h-[4.5rem] items-center gap-1">
+        <button
+          type="button"
+          aria-expanded={isExpanded}
+          onClick={() => setIsExpanded((expanded) => !expanded)}
+          className="flex min-h-[4.5rem] min-w-0 flex-1 items-center justify-between gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-chrome-yellow"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-calico shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]" style={{ backgroundColor: color }}>
+              <CategoryIcon category={category} label={label} />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate font-extrabold text-terracotta">{label}</span>
+              <span className="block truncate text-[11px] font-medium text-stone-light">{items.length > 0 ? `${items.length} 个项目` : '点开添加项目'}</span>
+            </span>
           </span>
-          <span>
-            <span className="block font-extrabold text-terracotta">{label}</span>
-            <span className="block text-[11px] font-medium text-stone-light">{items.length > 0 ? `${items.length} 个项目` : '还没有项目'}</span>
+          <span className="flex shrink-0 items-center gap-1 text-sm text-stone-light">
+            <span className={total > 0 ? 'depot-display font-extrabold text-terracotta' : 'font-semibold text-terracotta'}>
+              {total > 0 ? <><span className="font-semibold text-stone-800">{total}</span> 分</> : isExpanded ? '收起' : '添加'}
+            </span>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={isExpanded ? 'rotate-180' : ''}
+              aria-hidden
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
           </span>
-        </span>
-        <span className="flex shrink-0 items-center gap-2 text-sm text-stone-light">
-          <span className={total > 0 ? 'depot-display font-extrabold text-terracotta' : 'font-semibold text-terracotta'}>
-            {total > 0 ? <><span className="font-semibold text-stone-800">{total}</span> 分钟</> : isExpanded ? '收起' : '添加'}
-          </span>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={isExpanded ? 'rotate-180' : ''}
-            aria-hidden
+        </button>
+
+        {onCategoryTimer && (
+          <button
+            type="button"
+            onClick={onCategoryTimer}
+            aria-label={categoryTimerActive ? `查看「${label}」计时` : `直接为「${label}」计时`}
+            title={categoryTimerActive ? '查看计时' : `直接记录${label}`}
+            className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-[10px] border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chrome-yellow active:opacity-80 ${
+              categoryTimerActive
+                ? 'border-chrome-yellow bg-terracotta text-chrome-yellow'
+                : 'border-terracotta/25 bg-calico text-terracotta hover:bg-terracotta hover:text-chrome-yellow'
+            }`}
           >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </span>
-      </button>
+            <TimerIcon active={categoryTimerActive} />
+            <span className="text-[10px] font-extrabold leading-none">计时</span>
+          </button>
+        )}
+      </div>
 
       {isExpanded && <div className="border-t border-dashed border-terracotta/30 pb-3.5 pt-3.5">
       <div className="space-y-2.5">

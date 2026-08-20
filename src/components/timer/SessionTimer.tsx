@@ -38,11 +38,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
   }, [activeCategories, category])
 
   const handleStart = () => {
-    const name = taskName.trim()
-    if (!name) {
-      pushNotice({ message: '先填写任务名称', type: 'error' })
-      return
-    }
+    const name = taskName.trim() || getCategory(category).label
     if (mode === 'countdown') {
       if (!Number.isInteger(durationMinutes) || durationMinutes < 1) {
         pushNotice({ message: '倒计时至少 1 分钟', type: 'error' })
@@ -150,11 +146,10 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
   }
 
   const canStart =
-    !!taskName.trim() &&
-    (mode === 'stopwatch' ||
+    mode === 'stopwatch' ||
       (Number.isInteger(durationMinutes) &&
         durationMinutes >= 1 &&
-        durationMinutes <= MAX_COUNTDOWN_MINUTES))
+        durationMinutes <= MAX_COUNTDOWN_MINUTES)
 
   return (
     <div>
@@ -198,7 +193,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
           <div className="flex items-baseline gap-2">
             <div className="min-w-0 flex-1">
               <label htmlFor="timer-task-name" className="text-sm font-medium text-stone-800">
-                任务名称
+                具体项目 <span className="font-normal text-stone-light">（可选）</span>
               </label>
               <input
                 id="timer-task-name"
@@ -207,7 +202,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleStart()
                 }}
-                placeholder="做什么？例如：高等数学"
+                placeholder={`不填写则直接记录为「${getCategory(category).label}」`}
                 className="mt-2 min-h-12 w-full rounded-[10px] border border-terracotta/25 bg-calico px-3 py-2.5 text-base focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
               />
             </div>
