@@ -35,12 +35,24 @@ export interface CategorySubItem {
 
 export type CategorySubItems = Partial<Record<Category, CategorySubItem[]>>
 
+export interface ReadingLogEntry {
+  id: string
+  /** 本次阅读的书名 */
+  bookTitle: string
+  /** 起始页；未填写时为 null */
+  startPage: number | null
+  /** 结束页；未填写时为 null */
+  endPage: number | null
+}
+
 export interface DailyRecord {
   /** YYYY-MM-DD，每天唯一一条 */
   date: string
   minutes: Record<Category, number>
   /** 各大类下的小类及时长明细 */
   subItems?: CategorySubItems
+  /** 当天的书籍阅读页码记录 */
+  readingLogs?: ReadingLogEntry[]
   /** @deprecated 旧版各类别备注，导入时会迁移到 subItems */
   categoryNotes?: Partial<Record<Category, string>>
   /** @deprecated 当天备注已移除，旧数据导入时忽略 */

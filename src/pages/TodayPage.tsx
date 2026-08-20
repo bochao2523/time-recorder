@@ -3,12 +3,14 @@ import { useSearchParams } from 'react-router-dom'
 import { PageCard } from '../components/layout/Layout'
 import { DatePicker } from '../components/common/DatePicker'
 import { CategoryInput } from '../components/common/CategoryInput'
+import { ReadingLogSection } from '../components/reading/ReadingLogSection'
 import { useRecords } from '../context/RecordsContext'
 import { useTimer } from '../context/TimerContext'
 import {
   type Category,
   type CategorySubItem,
   type CategorySubItems,
+  type ReadingLogEntry,
 } from '../types'
 import {
   buildRecordFromForm,
@@ -79,6 +81,7 @@ export function TodayPage() {
   const initialDate = searchParams.get('date') ?? today()
   const [selectedDate, setSelectedDate] = useState(initialDate)
   const [subItems, setSubItems] = useState<CategorySubItems>(createEmptySubItems())
+  const [readingLogs, setReadingLogs] = useState<ReadingLogEntry[]>([])
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveStatusRef = useRef(saveStatus)
@@ -100,8 +103,10 @@ export function TodayPage() {
     const existing = getRecordByDate(selectedDate)
     if (existing) {
       setSubItems(subItemsFromRecord(existing))
+      setReadingLogs(existing.readingLogs?.map((entry) => ({ ...entry })) ?? [])
     } else {
       setSubItems(createEmptySubItems())
+      setReadingLogs([])
     }
     setSaveStatus('idle')
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 依赖 records / selectedDate
@@ -130,6 +135,26 @@ export function TodayPage() {
     setSubItems((prev) => ({ ...prev, [cat]: items ?? [] }))
     setSaveStatus('pending')
   }, [])
+
+  const handleReadingLogsChange = useCallback((entries: ReadingLogEntry[]) => {
+    setReadingLogs(entries)
+    setSaveStatus('pending')
+  }, [])
+
+  const ensureReadingTask = useCallback((rawTitle: string) => {
+    const name = rawTitle.trim()
+    if (!name) return
+    if (subItems.reading?.some((item) => item.name.trim() === name)) return
+    setSubItems((current) => {
+      const readingItems = current.reading ?? []
+      if (readingItems.some((item) => item.name.trim() === name)) return current
+      return {
+        ...current,
+        reading: [...readingItems, { name, minutes: 0 }],
+      }
+    })
+    setSaveStatus('pending')
+  }, [subItems.reading])
 
   /** 已有小类旁快捷正计时：同名累加记入 */
   const handleQuickTimer = useCallback(
@@ -207,6 +232,17 @@ export function TodayPage() {
     [getCategory, session, sessionTargets, start, openModal, pushNotice, selectedDate],
   )
 
+  const handleReadingTimer = useCallback((rawTitle: string) => {
+    const name = rawTitle.trim()
+    if (!name) {
+      pushNotice({ message: '先填写书名', type: 'error' })
+      return
+    }
+    const item = subItems.reading?.find((candidate) => candidate.name.trim() === name)
+      ?? { name, minutes: 0 }
+    handleQuickTimer('reading', item)
+  }, [subItems.reading, handleQuickTimer, pushNotice])
+
   const markSaved = useCallback(() => {
     setSaveStatus('saved')
   }, [])
@@ -214,7 +250,7 @@ export function TodayPage() {
   // 输入变更后自动保存（防抖）
   useEffect(() => {
     const timer = setTimeout(() => {
-      const pending = buildRecordFromForm(selectedDate, subItems)
+      const pending = buildRecordFromForm(selectedDate, subItems, readingLogs)
       const existing = getRecordByDate(selectedDate)
 
       if (!pending) {
@@ -227,7 +263,7 @@ export function TodayPage() {
         return
       }
 
-      if (existing && isSameFormAsRecord(selectedDate, subItems, existing)) {
+      if (existing && isSameFormAsRecord(selectedDate, subItems, readingLogs, existing)) {
         setSaveStatus('idle')
         return
       }
@@ -237,7 +273,7 @@ export function TodayPage() {
     }, AUTO_SAVE_DELAY_MS)
 
     return () => clearTimeout(timer)
-  }, [subItems, selectedDate, getRecordByDate, upsertRecord, deleteRecord, markSaved])
+  }, [subItems, readingLogs, selectedDate, getRecordByDate, upsertRecord, deleteRecord, markSaved])
 
   // 「已保存」提示短暂显示后恢复
   useEffect(() => {
@@ -362,6 +398,17 @@ export function TodayPage() {
           />
         ))}
       </div>
+
+      <ReadingLogSection
+        entries={readingLogs}
+        readingItems={subItems.reading ?? []}
+        activeTaskNames={sessionTargets
+          .filter((target) => target.category === 'reading')
+          .map((target) => target.taskName)}
+        onChange={handleReadingLogsChange}
+        onEnsureReadingTask={ensureReadingTask}
+        onStartTimer={handleReadingTimer}
+      />
     </div>
   )
 }

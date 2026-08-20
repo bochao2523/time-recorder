@@ -1,5 +1,6 @@
-import type { Category, CategoryDefinition, CategorySubItem, CategorySubItems, DailyRecord, ImportMode } from '../types'
+import type { Category, CategoryDefinition, CategorySubItem, CategorySubItems, DailyRecord, ImportMode, ReadingLogEntry } from '../types'
 import { minutesFromSubItems, subItemsFromRecord } from './categoryItems'
+import { normalizeReadingLogs } from './readingLogs'
 
 const STORAGE_KEY = 'time-tracker:records'
 
@@ -34,6 +35,21 @@ function validateSubItems(raw: unknown): raw is CategorySubItems {
   return true
 }
 
+function validateReadingLog(raw: unknown): raw is ReadingLogEntry {
+  if (!raw || typeof raw !== 'object') return false
+  const entry = raw as Record<string, unknown>
+  const validPage = (value: unknown) => (
+    value === null ||
+    (typeof value === 'number' && Number.isInteger(value) && value >= 1)
+  )
+  return (
+    typeof entry.id === 'string' && entry.id.trim().length > 0 &&
+    typeof entry.bookTitle === 'string' &&
+    validPage(entry.startPage) &&
+    validPage(entry.endPage)
+  )
+}
+
 /** 校验单条记录格式 */
 export function validateRecord(raw: unknown): raw is DailyRecord {
   if (!raw || typeof raw !== 'object') return false
@@ -47,6 +63,9 @@ export function validateRecord(raw: unknown): raw is DailyRecord {
   }
   if (r.note !== undefined && typeof r.note !== 'string') return false
   if (r.subItems !== undefined && !validateSubItems(r.subItems)) return false
+  if (r.readingLogs !== undefined) {
+    if (!Array.isArray(r.readingLogs) || !r.readingLogs.every(validateReadingLog)) return false
+  }
   if (r.categoryNotes !== undefined) {
     if (typeof r.categoryNotes !== 'object' || r.categoryNotes === null) return false
     const notes = r.categoryNotes as Record<string, unknown>
@@ -90,6 +109,7 @@ export function normalizeRecord(raw: DailyRecord): DailyRecord {
     date: raw.date,
     minutes,
     subItems,
+    readingLogs: normalizeReadingLogs(raw.readingLogs),
   }
 }
 
@@ -180,7 +200,7 @@ export function importRecords(
 /** 触发 JSON 文件下载 */
 export function downloadRecords(records: DailyRecord[], categories?: CategoryDefinition[]): void {
   const payload = {
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     categories,
     records,

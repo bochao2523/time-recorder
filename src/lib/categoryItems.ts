@@ -4,8 +4,10 @@ import {
   type CategorySubItem,
   type CategorySubItems,
   type DailyRecord,
+  type ReadingLogEntry,
 } from '../types'
 import type { TimerTarget } from './timerStorage'
+import { normalizeReadingLogs } from './readingLogs'
 
 export function sumSubItemMinutes(items: CategorySubItem[] | undefined): number {
   if (!items?.length) return 0
@@ -78,14 +80,17 @@ export function normalizeSubItemsForSave(raw: CategorySubItems): CategorySubItem
 export function buildRecordFromForm(
   date: string,
   subItems: CategorySubItems,
+  readingLogs: readonly ReadingLogEntry[] = [],
 ): DailyRecord | null {
   const normalizedSubItems = normalizeSubItemsForSave(subItems)
-  if (!normalizedSubItems) return null
+  const normalizedReadingLogs = normalizeReadingLogs(readingLogs)
+  if (!normalizedSubItems && !normalizedReadingLogs) return null
 
   return {
     date,
-    minutes: minutesFromSubItems(normalizedSubItems),
+    minutes: normalizedSubItems ? minutesFromSubItems(normalizedSubItems) : {},
     subItems: normalizedSubItems,
+    readingLogs: normalizedReadingLogs,
   }
 }
 
@@ -93,15 +98,21 @@ export function buildRecordFromForm(
 export function isSameFormAsRecord(
   date: string,
   subItems: CategorySubItems,
+  readingLogs: readonly ReadingLogEntry[],
   existing: DailyRecord,
 ): boolean {
-  const pending = buildRecordFromForm(date, subItems)
-  const snapshot = buildRecordFromForm(existing.date, subItemsFromRecord(existing))
+  const pending = buildRecordFromForm(date, subItems, readingLogs)
+  const snapshot = buildRecordFromForm(
+    existing.date,
+    subItemsFromRecord(existing),
+    existing.readingLogs,
+  )
   if (!pending && !snapshot) return true
   if (!pending || !snapshot) return false
   return (
     JSON.stringify(pending.minutes) === JSON.stringify(snapshot.minutes) &&
-    JSON.stringify(pending.subItems) === JSON.stringify(snapshot.subItems)
+    JSON.stringify(pending.subItems) === JSON.stringify(snapshot.subItems) &&
+    JSON.stringify(pending.readingLogs) === JSON.stringify(snapshot.readingLogs)
   )
 }
 
@@ -138,7 +149,11 @@ export function appendTaskMinutesToRecord(
     items.push({ name, minutes })
   }
 
-  return buildRecordFromForm(date, { ...subItems, [category]: items })
+  return buildRecordFromForm(
+    date,
+    { ...subItems, [category]: items },
+    existing?.readingLogs,
+  )
 }
 
 /** 同一次计时的每个任务都获得完整时长，因此总时长会按任务数累加。 */
