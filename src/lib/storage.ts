@@ -46,7 +46,13 @@ function validateReadingLog(raw: unknown): raw is ReadingLogEntry {
     typeof entry.id === 'string' && entry.id.trim().length > 0 &&
     typeof entry.bookTitle === 'string' &&
     validPage(entry.startPage) &&
-    validPage(entry.endPage)
+    validPage(entry.endPage) &&
+    (entry.minutes === undefined || (
+      typeof entry.minutes === 'number' &&
+      Number.isInteger(entry.minutes) &&
+      entry.minutes >= 0
+    )) &&
+    (entry.completedAt === undefined || typeof entry.completedAt === 'string')
   )
 }
 

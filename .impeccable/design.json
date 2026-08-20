@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-19T07:53:58Z",
+  "generatedAt": "2026-08-20T02:46:15Z",
   "title": "Design System: 时间站 · Time Depot",
   "extensions": {
     "colorMeta": {
@@ -164,8 +164,8 @@
       "name": "底部目的地导航",
       "kind": "nav",
       "refersTo": "navigation-active",
-      "description": "四个等宽目的地格；移动端图标在上，当前页整格使用铬黄色。",
-      "html": "<nav class=\"ds-bottom-nav\" aria-label=\"主导航\"><a class=\"ds-nav-item ds-nav-active\" href=\"#today\" aria-current=\"page\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z\"/></svg><span>今日</span></a><a class=\"ds-nav-item\" href=\"#history\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"17\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/></svg><span>记录</span></a><a class=\"ds-nav-item\" href=\"#stats\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3 3v18h18\"/><path d=\"m7 15 4-4 3 3 5-6\"/></svg><span>统计</span></a><a class=\"ds-nav-item\" href=\"#settings\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><circle cx=\"12\" cy=\"12\" r=\"8\"/></svg><span>设置</span></a></nav>",
+      "description": "五个等宽目的地格（今日、阅读、记录、统计、设置）；移动端图标在上，当前页整格使用铬黄色。",
+      "html": "<nav class=\"ds-bottom-nav\" aria-label=\"主导航\"><a class=\"ds-nav-item ds-nav-active\" href=\"#today\" aria-current=\"page\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z\"/></svg><span>今日</span></a><a class=\"ds-nav-item\" href=\"#reading\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 19.5A2.5 2.5 0 0 1 6.5 17H20\"/><path d=\"M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z\"/></svg><span>阅读</span></a><a class=\"ds-nav-item\" href=\"#history\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"17\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/></svg><span>记录</span></a><a class=\"ds-nav-item\" href=\"#stats\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3 3v18h18\"/><path d=\"m7 15 4-4 3 3 5-6\"/></svg><span>统计</span></a><a class=\"ds-nav-item\" href=\"#settings\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><circle cx=\"12\" cy=\"12\" r=\"8\"/></svg><span>设置</span></a></nav>",
       "css": ".ds-bottom-nav { height:72px; display:flex; overflow:hidden; border:1px solid rgba(255,210,0,.6); border-radius:14px; background:#0e3a2e; box-shadow:0 -10px 26px rgba(8,43,34,.18); } .ds-nav-item { min-width:0; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border-right:1px solid rgba(255,210,0,.25); color:#eee6d3; text-decoration:none; transition:color 140ms ease-out,background-color 140ms ease-out,border-color 140ms ease-out,opacity 140ms ease-out; } .ds-nav-item:last-child { border-right:0; } .ds-nav-item svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; } .ds-nav-item span { overflow:hidden; max-width:100%; font:800 13px/1 \"Barlow Condensed\",Arial Narrow,sans-serif; letter-spacing:.04em; text-overflow:ellipsis; white-space:nowrap; } .ds-nav-item:hover { background:rgba(255,255,255,.1); color:#fff; } .ds-nav-item:active { opacity:.8; } .ds-nav-item:focus-visible { outline:2px solid #ffd200; outline-offset:-2px; } .ds-nav-active,.ds-nav-active:hover { background:#ffd200; color:#0e3a2e; } @media (min-width:640px){.ds-bottom-nav{height:64px}.ds-nav-item{flex-direction:row;gap:8px}} @media (prefers-reduced-motion:reduce){.ds-nav-item{transition:none;}}"
     },
     {

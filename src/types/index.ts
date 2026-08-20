@@ -43,6 +43,10 @@ export interface ReadingLogEntry {
   startPage: number | null
   /** 结束页；未填写时为 null */
   endPage: number | null
+  /** 本次阅读计时产生的分钟数；不足 30 秒为 0，旧记录可能没有 */
+  minutes?: number
+  /** 本次阅读结束时间；ISO 字符串，旧记录可能没有 */
+  completedAt?: string
 }
 
 export interface DailyRecord {

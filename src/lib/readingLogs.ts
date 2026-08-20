@@ -16,6 +16,12 @@ export function normalizeReadingLogs(
       bookTitle: entry.bookTitle.trim(),
       startPage: normalizePage(entry.startPage),
       endPage: normalizePage(entry.endPage),
+      minutes: Number.isInteger(entry.minutes) && (entry.minutes ?? -1) >= 0
+        ? entry.minutes
+        : undefined,
+      completedAt: typeof entry.completedAt === 'string' && entry.completedAt.trim()
+        ? entry.completedAt
+        : undefined,
     }))
     .filter((entry) => (
       entry.id.length > 0 &&
@@ -34,4 +40,8 @@ export function countReadingPages(entry: ReadingLogEntry): number {
 
 export function totalReadingPages(entries: readonly ReadingLogEntry[]): number {
   return entries.reduce((total, entry) => total + countReadingPages(entry), 0)
+}
+
+export function totalReadingMinutes(entries: readonly ReadingLogEntry[]): number {
+  return entries.reduce((total, entry) => total + (entry.minutes ?? 0), 0)
 }

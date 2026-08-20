@@ -177,3 +177,24 @@ export function appendTimerTargetsToRecord(
   }
   return next ?? null
 }
+
+/** 阅读计时完成后，同时写入主页面阅读任务与逐次页码日志。 */
+export function appendReadingSessionToRecord(
+  existing: DailyRecord | undefined,
+  date: string,
+  entry: ReadingLogEntry,
+): DailyRecord | null {
+  const minutes = entry.minutes ?? 0
+  const timed = minutes > 0
+    ? appendTaskMinutesToRecord(existing, date, 'reading', entry.bookTitle, minutes)
+    : existing ?? { date, minutes: {} }
+  if (!timed) return null
+
+  return {
+    ...timed,
+    readingLogs: normalizeReadingLogs([
+      ...(existing?.readingLogs ?? []),
+      entry,
+    ]),
+  }
+}

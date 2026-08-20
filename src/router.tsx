@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route } from 'react-router-dom'
 import { Layout } from './components/layout/Layout'
 
 const TodayPage = lazy(() => import('./pages/TodayPage').then((module) => ({ default: module.TodayPage })))
+const ReadingPage = lazy(() => import('./pages/ReadingPage').then((module) => ({ default: module.ReadingPage })))
 const HistoryPage = lazy(() => import('./pages/HistoryPage').then((module) => ({ default: module.HistoryPage })))
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((module) => ({ default: module.SettingsPage })))
@@ -28,6 +29,7 @@ export function AppRouter() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<LazyPage><TodayPage /></LazyPage>} />
+          <Route path="/reading" element={<LazyPage><ReadingPage /></LazyPage>} />
           <Route path="/history" element={<LazyPage><HistoryPage /></LazyPage>} />
           <Route path="/dashboard" element={<LazyPage><DashboardPage /></LazyPage>} />
           <Route path="/settings" element={<LazyPage><SettingsPage /></LazyPage>} />

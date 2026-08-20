@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 
 const tabs = [
   { to: '/', label: '今日', end: true },
+  { to: '/reading', label: '阅读', end: false },
   { to: '/history', label: '记录', end: false },
   { to: '/dashboard', label: '统计', end: false },
   { to: '/settings', label: '设置', end: false },
@@ -60,6 +61,8 @@ function TabIcon({ path }: { path: string }) {
       return <svg {...common}><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" /></svg>
     case '/history':
       return <svg {...common}><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+    case '/reading':
+      return <svg {...common}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" /></svg>
     case '/dashboard':
       return <svg {...common}><path d="M3 3v18h18" /><path d="m7 15 4-4 3 3 5-6" /></svg>
     case '/settings':

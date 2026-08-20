@@ -9,7 +9,7 @@ export function TimerFloatingBar() {
   const { getCategory } = useCategories()
   const { pathname } = useLocation()
 
-  if (!session || modalOpen || pathname === '/') return null
+  if (!session || modalOpen || pathname === '/' || pathname === '/reading') return null
 
   const isPaused = session.status === 'paused'
   const isCountdown = session.mode === 'countdown'

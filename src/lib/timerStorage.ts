@@ -2,6 +2,7 @@ import type { Category } from '../types'
 
 export const TIMER_STORAGE_KEY = 'time-tracker:active-timer'
 export const PENDING_COMPLETE_KEY = 'time-tracker:pending-complete'
+export const PENDING_READING_COMPLETION_KEY = 'time-tracker:pending-reading-completion'
 
 /** 单次计时最长 5 小时，超时自动作废 */
 export const MAX_TIMER_MS = 5 * 60 * 60 * 1000
@@ -11,6 +12,7 @@ export const MIN_COUNTDOWN_MS = 60_000
 
 export type TimerStatus = 'running' | 'paused'
 export type TimerMode = 'stopwatch' | 'countdown'
+export type TimerCompletionKind = 'reading'
 
 export interface TimerTarget {
   taskName: string
@@ -34,6 +36,16 @@ export interface ActiveTimerSession {
   baseElapsedMs: number
   /** running 时当前段开始的 Date.now()；paused 时为 null */
   segmentStartedAt: number | null
+  /** 特殊的结束流程；阅读会先要求补录页码再保存 */
+  completionKind?: TimerCompletionKind
+}
+
+export interface PendingReadingCompletion {
+  id: string
+  bookTitle: string
+  date: string
+  minutes: number
+  completedAt: string
 }
 
 function isCategory(value: unknown): value is Category {
@@ -181,6 +193,7 @@ export function loadActiveTimer(): ActiveTimerSession | null {
       baseElapsedMs: data.baseElapsedMs,
       segmentStartedAt:
         data.status === 'paused' ? null : (data.segmentStartedAt as number | null),
+      completionKind: data.completionKind === 'reading' ? 'reading' : undefined,
     }
 
     return base
@@ -195,4 +208,36 @@ export function saveActiveTimer(session: ActiveTimerSession): void {
 
 export function clearActiveTimer(): void {
   localStorage.removeItem(TIMER_STORAGE_KEY)
+}
+
+export function loadPendingReadingCompletion(): PendingReadingCompletion | null {
+  try {
+    const raw = localStorage.getItem(PENDING_READING_COMPLETION_KEY)
+    if (!raw) return null
+    const value = JSON.parse(raw) as Record<string, unknown>
+    if (
+      typeof value.id !== 'string' || !value.id.trim() ||
+      typeof value.bookTitle !== 'string' || !value.bookTitle.trim() ||
+      typeof value.date !== 'string' ||
+      typeof value.minutes !== 'number' || !Number.isInteger(value.minutes) || value.minutes < 0 ||
+      typeof value.completedAt !== 'string'
+    ) return null
+    return {
+      id: value.id,
+      bookTitle: value.bookTitle.trim(),
+      date: value.date,
+      minutes: value.minutes,
+      completedAt: value.completedAt,
+    }
+  } catch {
+    return null
+  }
+}
+
+export function savePendingReadingCompletion(value: PendingReadingCompletion): void {
+  localStorage.setItem(PENDING_READING_COMPLETION_KEY, JSON.stringify(value))
+}
+
+export function clearPendingReadingCompletion(): void {
+  localStorage.removeItem(PENDING_READING_COMPLETION_KEY)
 }

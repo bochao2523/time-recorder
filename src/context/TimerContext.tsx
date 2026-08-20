@@ -9,10 +9,11 @@ import {
   type ReactNode,
 } from 'react'
 import type { Category } from '../types'
-import { appendTimerTargetsToRecord } from '../lib/categoryItems'
+import { appendReadingSessionToRecord, appendTimerTargetsToRecord } from '../lib/categoryItems'
 import { today } from '../lib/dateUtils'
 import {
   clearActiveTimer,
+  clearPendingReadingCompletion,
   elapsedMsToMinutes,
   formatSessionTargetNames,
   getDisplayMs,
@@ -21,14 +22,18 @@ import {
   isCountdownFinished,
   isTimerExpired,
   loadActiveTimer,
+  loadPendingReadingCompletion,
   MAX_TIMER_MS,
   MIN_COUNTDOWN_MS,
   normalizeTimerTargets,
   PENDING_COMPLETE_KEY,
   saveActiveTimer,
+  savePendingReadingCompletion,
   type ActiveTimerSession,
+  type PendingReadingCompletion,
   type TimerTarget,
   type TimerMode,
+  type TimerCompletionKind,
 } from '../lib/timerStorage'
 import { useRecords } from './RecordsContext'
 
@@ -48,6 +53,8 @@ export type StartTimerOptions = {
   targets?: TimerTarget[]
   /** 倒计时分钟数 */
   durationMinutes?: number
+  /** 结束后进入专用收尾流程 */
+  completionKind?: TimerCompletionKind
 }
 
 interface TimerContextValue {
@@ -56,6 +63,7 @@ interface TimerContextValue {
   displayMs: number
   modalOpen: boolean
   notice: TimerNotice | null
+  pendingReadingCompletion: PendingReadingCompletion | null
   openModal: () => void
   closeModal: () => void
   clearNotice: () => void
@@ -65,6 +73,8 @@ interface TimerContextValue {
   resume: () => void
   stop: () => StopTimerResult
   discard: () => void
+  completeReading: (startPage: number, endPage: number) => boolean
+  discardReadingCompletion: () => void
 }
 
 const TimerContext = createContext<TimerContextValue | null>(null)
@@ -128,6 +138,9 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const [modalOpen, setModalOpen] = useState(false)
   const [notice, setNotice] = useState<TimerNotice | null>(() =>
     initial.expired ? EXPIRED_NOTICE : null,
+  )
+  const [pendingReadingCompletion, setPendingReadingCompletion] = useState<PendingReadingCompletion | null>(
+    () => loadPendingReadingCompletion(),
   )
   const sessionRef = useRef(session)
   sessionRef.current = session
@@ -276,7 +289,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
           ? options.targets
           : [{ taskName, category }],
       )
-      if (targets.length === 0 || session) return false
+      if (targets.length === 0 || session || pendingReadingCompletion) return false
       const primary = targets[0]
 
       const mode: TimerMode = options.mode ?? 'stopwatch'
@@ -298,11 +311,12 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         durationMs,
         baseElapsedMs: 0,
         segmentStartedAt: Date.now(),
+        completionKind: options.completionKind,
       })
       setNow(Date.now())
       return true
     },
-    [persist, session],
+    [persist, session, pendingReadingCompletion],
   )
 
   const pause = useCallback(() => {
@@ -400,19 +414,66 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     persist(null)
     setModalOpen(false)
 
-    if (minutes <= 0) {
+    if (current.completionKind === 'reading') {
+      const pending: PendingReadingCompletion = {
+        id: typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `reading-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        bookTitle: taskName.trim(),
+        date,
+        minutes,
+        completedAt: new Date().toISOString(),
+      }
+      savePendingReadingCompletion(pending)
+      setPendingReadingCompletion(pending)
+    } else if (minutes > 0) {
+      recordMinutes(
+        targets,
+        date,
+        minutes,
+        completionNotice(targets, minutes),
+      )
+    } else {
       setNotice({ message: '少于 30 秒，未保存', type: 'error' })
       return { ok: false, reason: 'too_short' }
     }
-
-    recordMinutes(
-      targets,
-      date,
-      minutes,
-      completionNotice(targets, minutes),
-    )
     return { ok: true, minutes, taskName, category, targets, date }
   }, [persist, recordMinutes, voidExpired, completionNotice])
+
+  const completeReading = useCallback((startPage: number, endPage: number): boolean => {
+    const pending = pendingReadingCompletion
+    if (!pending) return false
+    if (
+      !Number.isInteger(startPage) || startPage < 1 ||
+      !Number.isInteger(endPage) || endPage < startPage
+    ) return false
+
+    const existing = getRecordByDate(pending.date)
+    const next = appendReadingSessionToRecord(existing, pending.date, {
+      id: pending.id,
+      bookTitle: pending.bookTitle,
+      startPage,
+      endPage,
+      minutes: pending.minutes,
+      completedAt: pending.completedAt,
+    })
+    if (!next) return false
+
+    upsertRecord(next)
+    clearPendingReadingCompletion()
+    setPendingReadingCompletion(null)
+    setNotice({
+      message: `已记录「${pending.bookTitle}」${endPage - startPage + 1} 页 · ${pending.minutes > 0 ? `${pending.minutes} 分钟` : '不足 1 分钟'}`,
+      type: 'success',
+    })
+    return true
+  }, [pendingReadingCompletion, getRecordByDate, upsertRecord])
+
+  const discardReadingCompletion = useCallback(() => {
+    clearPendingReadingCompletion()
+    setPendingReadingCompletion(null)
+    setNotice({ message: '本次阅读计时已删除', type: 'error' })
+  }, [])
 
   const value = useMemo(
     () => ({
@@ -421,6 +482,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       displayMs,
       modalOpen,
       notice,
+      pendingReadingCompletion,
       openModal,
       closeModal,
       clearNotice,
@@ -430,6 +492,8 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       resume,
       stop,
       discard,
+      completeReading,
+      discardReadingCompletion,
     }),
     [
       session,
@@ -437,6 +501,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       displayMs,
       modalOpen,
       notice,
+      pendingReadingCompletion,
       openModal,
       closeModal,
       clearNotice,
@@ -446,6 +511,8 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       resume,
       stop,
       discard,
+      completeReading,
+      discardReadingCompletion,
     ],
   )
 

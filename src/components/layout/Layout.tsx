@@ -4,11 +4,14 @@ import { TimerFloatingBar } from '../timer/TimerFloatingBar'
 import { TimerHeaderButton } from '../timer/TimerHeaderButton'
 import { TimerModal } from '../timer/TimerModal'
 import { TimerNotice } from '../timer/TimerNotice'
+import { ReadingCompletionModal } from '../reading/ReadingCompletionModal'
 
 export function Layout() {
   const { pathname } = useLocation()
   const pageTitle = pathname.startsWith('/history')
     ? '记录'
+    : pathname.startsWith('/reading')
+      ? '阅读'
     : pathname.startsWith('/dashboard')
       ? '统计'
       : pathname.startsWith('/settings')
@@ -26,10 +29,10 @@ export function Layout() {
             <span className="depot-eyelet" aria-hidden />
             <div className="min-w-0">
               <p className="depot-display text-[10px] font-bold uppercase leading-none tracking-[0.12em] text-terracotta/70">TIME DEPOT</p>
-              <h1 className="truncate text-xl font-extrabold leading-tight tracking-[-0.02em] text-terracotta sm:text-2xl">{pageTitle}</h1>
+              <h1 id="app-page-title" tabIndex={-1} className="truncate text-xl font-extrabold leading-tight tracking-[-0.02em] text-terracotta sm:text-2xl">{pageTitle}</h1>
             </div>
           </div>
-          <TimerHeaderButton hideIdle={pathname === '/'} />
+          <TimerHeaderButton hideIdle={pathname === '/' || pathname === '/reading'} />
         </div>
       </header>
 
@@ -40,6 +43,7 @@ export function Layout() {
       <TimerNotice />
       <TimerFloatingBar />
       <TimerModal />
+      <ReadingCompletionModal />
       <NavBar />
     </div>
   )
