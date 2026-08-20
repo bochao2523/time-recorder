@@ -1,16 +1,27 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTimer } from '../../context/TimerContext'
 import { useCategories } from '../../context/useCategories'
 import type { Category } from '../../types'
 import {
   formatElapsed,
+  formatSessionTargetNames,
+  getSessionTargets,
   MAX_TIMER_MS,
+  normalizeTimerTargets,
+  type TimerTarget,
   type TimerMode,
 } from '../../lib/timerStorage'
 import { today } from '../../lib/dateUtils'
 
 const COUNTDOWN_PRESETS = [15, 25, 45, 60] as const
 const MAX_COUNTDOWN_MINUTES = Math.floor(MAX_TIMER_MS / 60_000)
+const MAX_SIMULTANEOUS_TASKS = 8
+
+interface TimerTargetDraft {
+  id: string
+  taskName: string
+  category: Category
+}
 
 interface SessionTimerProps {
   /** 结束后关闭弹层等 */
@@ -20,8 +31,12 @@ interface SessionTimerProps {
 export function SessionTimer({ onFinished }: SessionTimerProps) {
   const { session, displayMs, start, pause, resume, stop, discard, pushNotice } = useTimer()
   const { activeCategories, getCategory } = useCategories()
-  const [taskName, setTaskName] = useState('')
-  const [category, setCategory] = useState<Category>(() => activeCategories[0]?.id ?? 'study')
+  const nextTargetIdRef = useRef(1)
+  const [draftTargets, setDraftTargets] = useState<TimerTargetDraft[]>(() => [{
+    id: 'timer-target-0',
+    taskName: '',
+    category: activeCategories[0]?.id ?? 'study',
+  }])
   const [mode, setMode] = useState<TimerMode>('stopwatch')
   const [durationMinutes, setDurationMinutes] = useState(25)
   /** 自定义输入展示：删光时为空，不强制显示 0 */
@@ -29,16 +44,63 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
 
   useEffect(() => {
     if (!session) return
-    setTaskName('')
-  }, [session])
+    setDraftTargets([{
+      id: `timer-target-${nextTargetIdRef.current++}`,
+      taskName: '',
+      category: activeCategories[0]?.id ?? 'study',
+    }])
+  }, [session, activeCategories])
 
   useEffect(() => {
-    if (activeCategories.some((item) => item.id === category)) return
-    setCategory(activeCategories[0]?.id ?? 'study')
-  }, [activeCategories, category])
+    const fallback = activeCategories[0]?.id ?? 'study'
+    setDraftTargets((current) => {
+      let changed = false
+      const next = current.map((target) => {
+        if (activeCategories.some((item) => item.id === target.category)) return target
+        changed = true
+        return { ...target, category: fallback }
+      })
+      return changed ? next : current
+    })
+  }, [activeCategories])
+
+  const updateDraftTarget = (id: string, patch: Partial<TimerTargetDraft>) => {
+    setDraftTargets((current) => current.map((target) => (
+      target.id === id ? { ...target, ...patch } : target
+    )))
+  }
+
+  const addDraftTarget = () => {
+    setDraftTargets((current) => {
+      if (current.length >= MAX_SIMULTANEOUS_TASKS) return current
+      const usedCategories = new Set(current.map((target) => target.category))
+      const nextCategory = activeCategories.find((item) => !usedCategories.has(item.id))?.id
+        ?? activeCategories[0]?.id
+        ?? 'study'
+      return [...current, {
+        id: `timer-target-${nextTargetIdRef.current++}`,
+        taskName: '',
+        category: nextCategory,
+      }]
+    })
+  }
+
+  const removeDraftTarget = (id: string) => {
+    setDraftTargets((current) => current.length > 1
+      ? current.filter((target) => target.id !== id)
+      : current)
+  }
 
   const handleStart = () => {
-    const name = taskName.trim() || getCategory(category).label
+    const requestedTargets: TimerTarget[] = draftTargets.map((target) => ({
+      category: target.category,
+      taskName: target.taskName.trim() || getCategory(target.category).label,
+    }))
+    const targets = normalizeTimerTargets(requestedTargets)
+    if (targets.length !== requestedTargets.length) {
+      pushNotice({ message: '有重复任务，请修改后再开始', type: 'error' })
+      return
+    }
     if (mode === 'countdown') {
       if (!Number.isInteger(durationMinutes) || durationMinutes < 1) {
         pushNotice({ message: '倒计时至少 1 分钟', type: 'error' })
@@ -49,9 +111,11 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
         return
       }
     }
-    const ok = start(name, category, {
+    const primary = targets[0]
+    const ok = start(primary.taskName, primary.category, {
       date: today(),
       mode,
+      targets,
       durationMinutes: mode === 'countdown' ? durationMinutes : undefined,
     })
     if (!ok) {
@@ -71,8 +135,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
   }
 
   if (session) {
-    const definition = getCategory(session.category)
-    const color = definition.color
+    const targets = getSessionTargets(session)
     const isPaused = session.status === 'paused'
     const isCountdown = session.mode === 'countdown'
     const totalLabel =
@@ -91,11 +154,30 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
           )}
         </div>
 
-        <h3 className="mt-2 truncate text-xl font-semibold text-stone-800">{session.taskName}</h3>
-        <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm" style={{ color }}>
-          <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-          {definition.label}
-          {totalLabel && <span className="text-stone-light">· {totalLabel}</span>}
+        <h3 className="mt-2 text-xl font-semibold text-stone-800">
+          {targets.length > 1 ? `${targets.length} 项同时计时` : formatSessionTargetNames(session)}
+        </h3>
+        <div className="mt-2 flex flex-wrap gap-1.5" aria-label="本次计时任务">
+          {targets.map((target) => {
+            const definition = getCategory(target.category)
+            return (
+              <span
+                key={`${target.category}-${target.taskName}`}
+                className="inline-flex min-h-7 items-center gap-1.5 rounded-[8px] border bg-calico px-2 py-1 text-xs font-bold text-stone-800"
+                style={{ borderColor: definition.color }}
+              >
+                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: definition.color }} />
+                {target.taskName}
+                {target.taskName !== definition.label && (
+                  <span className="font-medium text-stone-light">· {definition.label}</span>
+                )}
+              </span>
+            )
+          })}
+        </div>
+        <p className="mt-2 text-xs text-stone-light">
+          {targets.length > 1 ? '结束后每项都会获得完整时长' : getCategory(targets[0].category).label}
+          {totalLabel && ` · ${totalLabel}`}
         </p>
 
         <div className="mt-6 rounded-2xl bg-cream px-4 py-6 text-center">
@@ -190,49 +272,75 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
         </li>
 
         <li>
-          <div className="flex items-baseline gap-2">
-            <div className="min-w-0 flex-1">
-              <label htmlFor="timer-task-name" className="text-sm font-medium text-stone-800">
-                具体项目 <span className="font-normal text-stone-light">（可选）</span>
-              </label>
-              <input
-                id="timer-task-name"
-                value={taskName}
-                onChange={(e) => setTaskName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleStart()
-                }}
-                placeholder={`不填写则直接记录为「${getCategory(category).label}」`}
-                className="mt-2 min-h-12 w-full rounded-[10px] border border-terracotta/25 bg-calico px-3 py-2.5 text-base focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
-              />
-            </div>
+          <div className="flex items-end justify-between gap-3">
+            <p className="text-sm font-medium text-stone-800">计时任务</p>
+            <p className="text-right text-[11px] font-medium text-stone-light">
+              {draftTargets.length} 项 × 完整时长
+            </p>
           </div>
-        </li>
-
-        <li>
-          <div className="flex items-baseline gap-2">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-stone-800">分类</p>
-              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {activeCategories.map((definition) => {
-                  const active = category === definition.id
-                  return (
+          <div className="mt-2 space-y-2.5">
+            {draftTargets.map((target, index) => (
+              <div
+                key={target.id}
+                className="rounded-[12px] border border-terracotta/25 bg-cream/70 p-2.5"
+              >
+                <div className="mb-2 flex min-h-7 items-center justify-between gap-2">
+                  <p className="text-xs font-bold text-terracotta">任务 {index + 1}</p>
+                  {draftTargets.length > 1 && (
                     <button
-                      key={definition.id}
                       type="button"
-                      onClick={() => setCategory(definition.id)}
-                      className={`min-h-11 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-                        active ? 'text-white shadow-sm' : 'bg-cream text-stone-800 hover:bg-cream-dark'
-                      }`}
-                      style={active ? { backgroundColor: definition.color } : undefined}
+                      onClick={() => removeDraftTarget(target.id)}
+                      aria-label={`删除任务 ${index + 1}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-[8px] text-stone-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chrome-yellow active:bg-cream-dark active:text-terracotta"
                     >
-                      {definition.label}
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5" /></svg>
                     </button>
-                  )
-                })}
+                  )}
+                </div>
+                <div className="grid grid-cols-[7.25rem_minmax(0,1fr)] gap-2">
+                  <label className="relative min-w-0">
+                    <span className="sr-only">任务 {index + 1} 大类</span>
+                    <select
+                      value={target.category}
+                      onChange={(event) => updateDraftTarget(target.id, { category: event.target.value })}
+                      className="min-h-12 w-full appearance-none rounded-[10px] border border-terracotta/25 bg-calico py-2 pl-3 pr-8 text-base font-bold text-terracotta focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
+                    >
+                      {activeCategories.map((definition) => (
+                        <option key={definition.id} value={definition.id}>{definition.label}</option>
+                      ))}
+                    </select>
+                    <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-terracotta" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 9 6 6 6-6" /></svg>
+                  </label>
+                  <input
+                    type="text"
+                    value={target.taskName}
+                    onChange={(event) => updateDraftTarget(target.id, { taskName: event.target.value })}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') handleStart()
+                    }}
+                    placeholder="具体项目（可不填）"
+                    aria-label={`任务 ${index + 1} 具体项目（可选）`}
+                    className="min-h-12 min-w-0 rounded-[10px] border border-terracotta/25 bg-calico px-3 py-2 text-base placeholder:text-stone-400 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
+                  />
+                </div>
               </div>
-            </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={addDraftTarget}
+              disabled={draftTargets.length >= MAX_SIMULTANEOUS_TASKS}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[10px] border border-dashed border-terracotta/40 bg-calico px-3 py-2 text-sm font-bold text-terracotta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chrome-yellow active:bg-cream-dark disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
+              {draftTargets.length >= MAX_SIMULTANEOUS_TASKS ? '最多同时记录 8 项' : '同时记录另一个任务'}
+            </button>
           </div>
+          {draftTargets.length > 1 && (
+            <p className="mt-2 text-xs leading-5 text-stone-light">
+              例如计时 30 分钟，{draftTargets.length} 项任务会累计 {draftTargets.length * 30} 分钟。
+            </p>
+          )}
         </li>
 
         {mode === 'countdown' && (

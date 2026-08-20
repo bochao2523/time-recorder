@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 import { useTimer } from '../../context/TimerContext'
 import { SessionTimer } from './SessionTimer'
+import { getSessionTargets } from '../../lib/timerStorage'
 
 export function TimerModal() {
   const { modalOpen, closeModal, session } = useTimer()
@@ -71,6 +72,8 @@ export function TimerModal() {
 
   if (!modalOpen) return null
 
+  const targetCount = session ? getSessionTargets(session).length : 0
+
   return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center"
@@ -109,8 +112,10 @@ export function TimerModal() {
             </p>
             <p className="mt-0.5 text-xs text-stone-light">
               {session
-                ? '收起后仍会继续'
-                : '选择大类即可，具体项目可不填'}
+                ? targetCount > 1
+                  ? `${targetCount} 项同时计时 · 收起后仍会继续`
+                  : '收起后仍会继续'
+                : '可添加多个任务，每项都会获得完整时长'}
             </p>
           </div>
           <button

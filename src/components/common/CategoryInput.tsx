@@ -8,8 +8,8 @@ interface CategoryInputProps {
   onChange: (items: CategorySubItem[]) => void
   /** 快捷继续计时（有任务名的行显示） */
   onQuickTimer?: (item: CategorySubItem) => void
-  /** 当前正在计时的任务名（同分类下高亮） */
-  activeTaskName?: string | null
+  /** 当前正在计时的任务名（同分类下可有多个） */
+  activeTaskNames?: string[]
   /** 不填写小类，直接为整个大类计时 */
   onCategoryTimer?: () => void
   /** 当前是否正在为整个大类计时 */
@@ -98,7 +98,7 @@ export function CategoryInput({
   items,
   onChange,
   onQuickTimer,
-  activeTaskName,
+  activeTaskNames = [],
   onCategoryTimer,
   categoryTimerActive = false,
 }: CategoryInputProps) {
@@ -234,7 +234,7 @@ export function CategoryInput({
           const taskName = item.name.trim()
           const showQuickTimer = !!onQuickTimer && taskName.length > 0
           const isActive =
-            !!activeTaskName && activeTaskName.trim() === taskName
+            activeTaskNames.some((activeName) => activeName.trim() === taskName)
 
           return (
             <div

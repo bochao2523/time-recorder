@@ -18,7 +18,11 @@ import {
   sumSubItemMinutes,
 } from '../lib/categoryItems'
 import { formatDisplayDate, formatMinutes, today } from '../lib/dateUtils'
-import { formatElapsed } from '../lib/timerStorage'
+import {
+  formatElapsed,
+  formatSessionTargetNames,
+  getSessionTargets,
+} from '../lib/timerStorage'
 import { useCategories } from '../context/useCategories'
 
 const AUTO_SAVE_DELAY_MS = 600
@@ -117,6 +121,11 @@ export function TodayPage() {
     return [...activeCategories, ...archivedWithTime]
   }, [activeCategories, subItems, getCategory])
 
+  const sessionTargets = useMemo(
+    () => session ? getSessionTargets(session) : [],
+    [session],
+  )
+
   const handleSubItemsChange = useCallback((cat: Category, items: CategorySubItems[Category]) => {
     setSubItems((prev) => ({ ...prev, [cat]: items ?? [] }))
     setSaveStatus('pending')
@@ -133,8 +142,9 @@ export function TodayPage() {
 
       if (
         session &&
-        session.category === cat &&
-        session.taskName.trim() === name
+        sessionTargets.some((target) => (
+          target.category === cat && target.taskName.trim() === name
+        ))
       ) {
         openModal()
         return
@@ -142,7 +152,9 @@ export function TodayPage() {
 
       if (session) {
         pushNotice({
-          message: `「${session.taskName}」正在计时`,
+          message: sessionTargets.length > 1
+            ? `${sessionTargets.length} 项任务正在同时计时`
+            : `「${formatSessionTargetNames(session)}」正在计时`,
           type: 'error',
         })
         openModal()
@@ -156,7 +168,7 @@ export function TodayPage() {
       }
       openModal()
     },
-    [session, start, openModal, pushNotice, selectedDate],
+    [session, sessionTargets, start, openModal, pushNotice, selectedDate],
   )
 
   /** 无需填写小类，直接按大类开始正计时 */
@@ -166,8 +178,9 @@ export function TodayPage() {
 
       if (
         session &&
-        session.category === cat &&
-        session.taskName.trim() === label
+        sessionTargets.some((target) => (
+          target.category === cat && target.taskName.trim() === label
+        ))
       ) {
         openModal()
         return
@@ -175,7 +188,9 @@ export function TodayPage() {
 
       if (session) {
         pushNotice({
-          message: `「${session.taskName}」正在计时`,
+          message: sessionTargets.length > 1
+            ? `${sessionTargets.length} 项任务正在同时计时`
+            : `「${formatSessionTargetNames(session)}」正在计时`,
           type: 'error',
         })
         openModal()
@@ -189,7 +204,7 @@ export function TodayPage() {
       }
       openModal()
     },
-    [getCategory, session, start, openModal, pushNotice, selectedDate],
+    [getCategory, session, sessionTargets, start, openModal, pushNotice, selectedDate],
   )
 
   const markSaved = useCallback(() => {
@@ -246,21 +261,21 @@ export function TodayPage() {
       </PageCard>
 
       <section className="depot-cloth stitched-panel overflow-hidden rounded-[14px] p-4 sm:p-5" aria-labelledby="today-total-title">
-        <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-end gap-2.5 sm:grid-cols-[minmax(9rem,auto)_minmax(0,1fr)] sm:gap-5">
-          <div className="min-w-0 border-r border-chrome-yellow/35 pr-3 sm:pr-5">
+        <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(12.5rem,auto)_minmax(0,1fr)] sm:items-end sm:gap-5">
+          <div className="min-w-0 overflow-hidden border-b border-chrome-yellow/35 pb-3 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-5">
             <p id="today-total-title" className="depot-display text-sm font-extrabold tracking-[0.08em] text-chrome-yellow/85">
               {selectedDate === today() ? '今日已记录' : formatDisplayDate(selectedDate)}
             </p>
-            <p className="depot-display mt-1 whitespace-nowrap text-[2.05rem] font-extrabold leading-none tracking-[-0.02em] text-chrome-yellow sm:text-5xl">
+            <p className="depot-display mt-1 max-w-full whitespace-nowrap text-[2.25rem] font-extrabold leading-none tracking-[-0.02em] text-chrome-yellow sm:text-[2.65rem]">
               {formatSummaryTotal(total)}
             </p>
           </div>
-          <div className="min-w-0 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="各任务大类时长">
+          <div className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="各任务大类时长">
             <div
-              className="grid items-stretch"
+              className="grid w-full items-stretch"
               style={{
-                gridTemplateColumns: `repeat(${Math.max(summaryCategories.length, 1)}, minmax(0, 1fr))`,
-                minWidth: summaryCategories.length > 5 ? `${summaryCategories.length * 2.7}rem` : undefined,
+                gridTemplateColumns: `repeat(${Math.max(summaryCategories.length, 1)}, minmax(3.25rem, 1fr))`,
+                minWidth: `${Math.max(summaryCategories.length, 1) * 3.25}rem`,
               }}
             >
               {summaryCategories.map((category) => {
@@ -272,7 +287,7 @@ export function TodayPage() {
                     aria-label={`${category.label} ${formatMinutes(minutes)}`}
                   >
                     <p className="truncate text-[11px] font-bold text-chrome-yellow/90 sm:text-xs">{category.label}</p>
-                    <p className="depot-display mt-1 text-base font-bold leading-none tabular-nums text-chrome-yellow/75">{formatCategoryDuration(minutes)}</p>
+                    <p className="depot-display mt-1 whitespace-nowrap text-base font-bold leading-none tabular-nums text-chrome-yellow/75">{formatCategoryDuration(minutes)}</p>
                   </div>
                 )
               })}
@@ -287,7 +302,7 @@ export function TodayPage() {
             className="calico-surface stitched-light flex min-h-16 w-full items-center justify-center gap-3 rounded-[12px] px-4 text-left text-sm font-extrabold text-terracotta active:bg-cream-dark"
           >
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4V8Z" /></svg>
-            <span className="leading-tight">开始计时<span className="mt-1 block text-xs font-semibold text-stone-light">选择大类即可，具体项目可不填</span></span>
+            <span className="leading-tight">开始计时<span className="mt-1 block text-xs font-semibold text-stone-light">可选一个或多个任务，具体项目可不填</span></span>
           </button>
           <span className="depot-eyelet absolute -bottom-1 -right-1 scale-75" aria-hidden />
         </div>
@@ -296,10 +311,12 @@ export function TodayPage() {
       <section className="depot-cloth stitched-panel flex min-h-[5.5rem] items-center gap-3 overflow-hidden rounded-[14px] px-4 py-3" aria-label="当前计时">
         <div className="min-w-0 flex-1">
           <p className="depot-display text-xs font-extrabold tracking-[0.08em] text-chrome-yellow/80">
-            {session ? `${session.status === 'paused' ? '已暂停' : '正在计时'} · ${getCategory(session.category).label}` : '当前没有计时'}
+            {session
+              ? `${session.status === 'paused' ? '已暂停' : '正在计时'} · ${sessionTargets.length > 1 ? `${sessionTargets.length} 项任务` : getCategory(session.category).label}`
+              : '当前没有计时'}
           </p>
           <p className="mt-1 truncate text-base font-bold text-chrome-yellow">
-            {session?.taskName ?? '选择一个大类，马上开始计时'}
+            {session ? formatSessionTargetNames(session) : '选择任务开始'}
           </p>
         </div>
         <p className="stable-timer-slot depot-display shrink-0 text-right text-2xl font-extrabold tracking-[0.04em] text-chrome-yellow">
@@ -334,12 +351,14 @@ export function TodayPage() {
             onQuickTimer={(item) => handleQuickTimer(definition.id, item)}
             onCategoryTimer={() => handleCategoryTimer(definition.id)}
             categoryTimerActive={
-              session?.category === definition.id &&
-              session.taskName.trim() === definition.label
+              sessionTargets.some((target) => (
+                target.category === definition.id &&
+                target.taskName.trim() === definition.label
+              ))
             }
-            activeTaskName={
-              session?.category === definition.id ? session.taskName : null
-            }
+            activeTaskNames={sessionTargets
+              .filter((target) => target.category === definition.id)
+              .map((target) => target.taskName)}
           />
         ))}
       </div>

@@ -5,6 +5,7 @@ import {
   type CategorySubItems,
   type DailyRecord,
 } from '../types'
+import type { TimerTarget } from './timerStorage'
 
 export function sumSubItemMinutes(items: CategorySubItem[] | undefined): number {
   if (!items?.length) return 0
@@ -138,4 +139,26 @@ export function appendTaskMinutesToRecord(
   }
 
   return buildRecordFromForm(date, { ...subItems, [category]: items })
+}
+
+/** 同一次计时的每个任务都获得完整时长，因此总时长会按任务数累加。 */
+export function appendTimerTargetsToRecord(
+  existing: DailyRecord | undefined,
+  date: string,
+  targets: readonly TimerTarget[],
+  minutes: number,
+): DailyRecord | null {
+  if (minutes <= 0 || targets.length === 0) return null
+
+  let next = existing
+  for (const target of targets) {
+    next = appendTaskMinutesToRecord(
+      next,
+      date,
+      target.category,
+      target.taskName,
+      minutes,
+    ) ?? next
+  }
+  return next ?? null
 }

@@ -12,10 +12,18 @@ export const MIN_COUNTDOWN_MS = 60_000
 export type TimerStatus = 'running' | 'paused'
 export type TimerMode = 'stopwatch' | 'countdown'
 
-/** 进行中的计时会话（墙钟计时，未暂停时跨刷新/切页仍继续） */
-export interface ActiveTimerSession {
+export interface TimerTarget {
   taskName: string
   category: Category
+}
+
+/** 进行中的计时会话（墙钟计时，未暂停时跨刷新/切页仍继续） */
+export interface ActiveTimerSession {
+  /** 主任务（兼容旧版计时数据）；多任务详情见 targets */
+  taskName: string
+  category: Category
+  /** 同一次计时包含的全部任务；每项结束时都会获得完整时长 */
+  targets: TimerTarget[]
   /** 记入哪一天 YYYY-MM-DD */
   date: string
   status: TimerStatus
@@ -34,6 +42,35 @@ function isCategory(value: unknown): value is Category {
 
 function isTimerMode(value: unknown): value is TimerMode {
   return value === 'stopwatch' || value === 'countdown'
+}
+
+/** 清理并去重计时任务；同一大类下同名项目视为同一任务。 */
+export function normalizeTimerTargets(targets: readonly TimerTarget[]): TimerTarget[] {
+  const result: TimerTarget[] = []
+  const seen = new Set<string>()
+
+  for (const target of targets) {
+    const taskName = target.taskName.trim()
+    const category = target.category.trim()
+    if (!taskName || !category) continue
+    const key = `${category}\u0000${taskName}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push({ taskName, category })
+  }
+
+  return result
+}
+
+export function getSessionTargets(session: ActiveTimerSession): TimerTarget[] {
+  const targets = normalizeTimerTargets(session.targets ?? [])
+  return targets.length > 0
+    ? targets
+    : [{ taskName: session.taskName.trim(), category: session.category }]
+}
+
+export function formatSessionTargetNames(session: ActiveTimerSession): string {
+  return getSessionTargets(session).map((target) => target.taskName).join(' ＋ ')
 }
 
 export function getElapsedMs(session: ActiveTimerSession, now = Date.now()): number {
@@ -117,9 +154,26 @@ export function loadActiveTimer(): ActiveTimerSession | null {
 
     if (data.status === 'running' && data.segmentStartedAt == null) return null
 
+    const rawTargets = Array.isArray(data.targets)
+      ? data.targets.flatMap((target) => {
+          if (!target || typeof target !== 'object') return []
+          const candidate = target as Record<string, unknown>
+          if (typeof candidate.taskName !== 'string' || !isCategory(candidate.category)) return []
+          return [{ taskName: candidate.taskName, category: candidate.category }]
+        })
+      : []
+    const targets = normalizeTimerTargets(
+      rawTargets.length > 0
+        ? rawTargets
+        : [{ taskName: data.taskName.trim(), category: data.category }],
+    )
+    if (targets.length === 0) return null
+    const primary = targets[0]
+
     const base: ActiveTimerSession = {
-      taskName: data.taskName.trim(),
-      category: data.category,
+      taskName: primary.taskName,
+      category: primary.category,
+      targets,
       date: data.date,
       status: data.status === 'paused' ? 'paused' : 'running',
       mode,
