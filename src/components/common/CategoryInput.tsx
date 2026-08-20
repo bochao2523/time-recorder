@@ -99,17 +99,13 @@ export function CategoryInput({
   const { id: category, label, color } = definition
   const rows = displayItems(items)
   const total = sumSubItemMinutes(items)
-  const [isExpanded, setIsExpanded] = useState(items.length > 0)
+  const [isExpanded, setIsExpanded] = useState(false)
   /** 分钟输入草稿：删光时显示空，失焦后再提交 0，避免改数时整行被自动清掉 */
   const [minutesDraft, setMinutesDraft] = useState<Record<number, string>>({})
 
   useEffect(() => {
     setMinutesDraft({})
   }, [category, items.length])
-
-  useEffect(() => {
-    if (items.length > 0) setIsExpanded(true)
-  }, [items.length])
 
   const updateItems = (next: CategorySubItem[]) => {
     onChange(next)

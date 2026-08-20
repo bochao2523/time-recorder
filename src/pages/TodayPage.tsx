@@ -34,10 +34,9 @@ function SaveStatusBadge({ status }: { status: SaveStatus }) {
           ? 'border-terracotta/30 bg-terracotta text-chrome-yellow'
           : status === 'pending'
             ? 'border-terracotta/25 bg-calico text-terracotta'
-            : 'invisible border-transparent'
+            : 'border-terracotta/22 bg-calico text-terracotta'
       }`}
       aria-live="polite"
-      aria-hidden={status === 'idle'}
     >
       {status === 'saved' ? <>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -52,6 +51,21 @@ function SaveStatusBadge({ status }: { status: SaveStatus }) {
   )
 }
 
+function formatCategoryDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  return `${hours}:${String(remainder).padStart(2, '0')}`
+}
+
+function formatSummaryTotal(minutes: number): string {
+  if (minutes <= 0) return '0分钟'
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  if (hours === 0) return `${remainder}分钟`
+  if (remainder === 0) return `${hours}小时`
+  return `${hours}小时${remainder}分`
+}
+
 export function TodayPage() {
   const [searchParams] = useSearchParams()
   const { records, getRecordByDate, upsertRecord, deleteRecord } = useRecords()
@@ -62,7 +76,6 @@ export function TodayPage() {
   const [selectedDate, setSelectedDate] = useState(initialDate)
   const [subItems, setSubItems] = useState<CategorySubItems>(createEmptySubItems())
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
-  const manualEntryRef = useRef<HTMLDivElement>(null)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveStatusRef = useRef(saveStatus)
   saveStatusRef.current = saveStatus
@@ -95,6 +108,14 @@ export function TodayPage() {
       Object.values(subItems).flatMap((items) => items ?? []),
     )
   }, [subItems])
+
+  const summaryCategories = useMemo(() => {
+    const activeIds = new Set(activeCategories.map((category) => category.id))
+    const archivedWithTime = Object.entries(subItems)
+      .filter(([id, items]) => !activeIds.has(id) && sumSubItemMinutes(items) > 0)
+      .map(([id]) => getCategory(id))
+    return [...activeCategories, ...archivedWithTime]
+  }, [activeCategories, subItems, getCategory])
 
   const handleSubItemsChange = useCallback((cat: Category, items: CategorySubItems[Category]) => {
     setSubItems((prev) => ({ ...prev, [cat]: items ?? [] }))
@@ -137,21 +158,6 @@ export function TodayPage() {
     },
     [session, start, openModal, pushNotice, selectedDate],
   )
-
-  const handleManualEntry = useCallback(() => {
-    const target = manualEntryRef.current
-    if (!target) return
-    target.scrollIntoView({ block: 'start' })
-    const firstInput = target.querySelector<HTMLInputElement>('input')
-    if (!firstInput) {
-      target.querySelector<HTMLButtonElement>('button[aria-expanded="false"]')?.click()
-    }
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        target.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true })
-      })
-    })
-  }, [])
 
   const markSaved = useCallback(() => {
     setSaveStatus('saved')
@@ -199,54 +205,58 @@ export function TodayPage() {
 
   return (
     <div className="no-layout-animation space-y-3">
-      <PageCard className="p-3.5 sm:p-4">
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <DatePicker value={selectedDate} onChange={setSelectedDate} max={today()} />
-            <p
-              className={`mt-2 min-h-5 text-xs font-medium text-stone-light ${selectedDate === today() ? 'invisible' : ''}`}
-              aria-hidden={selectedDate === today()}
-            >
-              {selectedDate === today() ? '当前日期' : `正在编辑 ${formatDisplayDate(selectedDate)}`}
-            </p>
-          </div>
+      <PageCard className="p-2.5 sm:p-3">
+        <div className="flex items-center gap-2.5">
+          <DatePicker value={selectedDate} onChange={setSelectedDate} max={today()} />
           <SaveStatusBadge status={saveStatus} />
         </div>
       </PageCard>
 
       <section className="depot-cloth stitched-panel overflow-hidden rounded-[14px] p-4 sm:p-5" aria-labelledby="today-total-title">
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
+        <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-end gap-2.5 sm:grid-cols-[minmax(9rem,auto)_minmax(0,1fr)] sm:gap-5">
+          <div className="min-w-0 border-r border-chrome-yellow/35 pr-3 sm:pr-5">
             <p id="today-total-title" className="depot-display text-sm font-extrabold tracking-[0.08em] text-chrome-yellow/85">
               {selectedDate === today() ? '今日已记录' : formatDisplayDate(selectedDate)}
             </p>
-            <p className="depot-display mt-1 whitespace-nowrap text-[2.7rem] font-extrabold leading-none tracking-[-0.02em] text-chrome-yellow sm:text-5xl">
-              {total > 0 ? formatMinutes(total) : '0 分钟'}
+            <p className="depot-display mt-1 whitespace-nowrap text-[2.05rem] font-extrabold leading-none tracking-[-0.02em] text-chrome-yellow sm:text-5xl">
+              {formatSummaryTotal(total)}
             </p>
           </div>
-          <div className="grid shrink-0 grid-cols-2 gap-x-3 text-right text-[10px] font-bold leading-tight text-chrome-yellow/75 sm:text-xs">
-            <span>记录</span><span>{Object.values(subItems).flatMap((items) => items ?? []).filter((item) => item.minutes > 0).length} 项</span>
-            <span>状态</span><span>{session ? '计时中' : '待开始'}</span>
+          <div className="min-w-0 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="各任务大类时长">
+            <div
+              className="grid items-stretch"
+              style={{
+                gridTemplateColumns: `repeat(${Math.max(summaryCategories.length, 1)}, minmax(0, 1fr))`,
+                minWidth: summaryCategories.length > 5 ? `${summaryCategories.length * 2.7}rem` : undefined,
+              }}
+            >
+              {summaryCategories.map((category) => {
+                const minutes = sumSubItemMinutes(subItems[category.id])
+                return (
+                  <div
+                    key={category.id}
+                    className="min-w-0 border-l border-dashed border-chrome-yellow/30 px-1.5 first:border-l-0 first:pl-0"
+                    aria-label={`${category.label} ${formatMinutes(minutes)}`}
+                  >
+                    <p className="truncate text-[11px] font-bold text-chrome-yellow/90 sm:text-xs">{category.label}</p>
+                    <p className="depot-display mt-1 text-base font-bold leading-none tabular-nums text-chrome-yellow/75">{formatCategoryDuration(minutes)}</p>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2.5 border-t border-chrome-yellow/35 pt-4">
-          <button
-            type="button"
-            onClick={handleManualEntry}
-            className="calico-surface stitched-light flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-[12px] px-3 text-sm font-extrabold text-terracotta active:bg-cream-dark"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" /></svg>
-            <span className="leading-tight">手动记录<span className="mt-1 block text-xs font-semibold text-stone-light">填写已经花掉的时间</span></span>
-          </button>
+        <div className="relative mt-4 border-t border-chrome-yellow/35 pt-4">
           <button
             type="button"
             onClick={openModal}
-            className="calico-surface stitched-light flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-[12px] px-3 text-sm font-extrabold text-terracotta active:bg-cream-dark"
+            className="calico-surface stitched-light flex min-h-16 w-full items-center justify-center gap-3 rounded-[12px] px-4 text-left text-sm font-extrabold text-terracotta active:bg-cream-dark"
           >
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4V8Z" /></svg>
-            <span className="leading-tight">开始计时<span className="mt-1 block text-xs font-semibold text-stone-light">从现在开始自动累计</span></span>
+            <span className="leading-tight">开始计时<span className="mt-1 block text-xs font-semibold text-stone-light">选择任务后从现在开始累计</span></span>
           </button>
+          <span className="depot-eyelet absolute -bottom-1 -right-1 scale-75" aria-hidden />
         </div>
       </section>
 
@@ -276,11 +286,11 @@ export function TodayPage() {
         </button>
       </section>
 
-      <div ref={manualEntryRef} id="manual-entry" className="space-y-2.5 scroll-mt-24">
+      <div id="manual-entry" className="space-y-2.5 scroll-mt-24">
         <div className="flex items-center gap-2 px-1 pb-0.5 pt-1">
           <span className="depot-eyelet" aria-hidden />
-          <h2 className="text-base font-extrabold text-terracotta">任务记录</h2>
-          <p className="ml-auto text-xs font-medium text-stone-light">修改后自动保存</p>
+          <h2 className="text-base font-extrabold text-terracotta">今日任务</h2>
+          <p className="ml-auto text-xs font-medium text-stone-light">点开大类直接填写分钟</p>
         </div>
         {activeCategories.map((definition) => (
           <CategoryInput
