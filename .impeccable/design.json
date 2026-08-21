@@ -194,6 +194,7 @@
       {"name": "The Stable Numeral Rule", "body": "所有计时与总量使用等宽数字，并为最长可信内容预留宽度。", "section": "typography"},
       {"name": "The Reserved Slot Rule", "body": "页头、帮助文案、保存状态和计时读数使用固定或最小尺寸槽位；状态变化只替换内容，不重新排版周围界面。", "section": "layout"},
       {"name": "The Equal Entry Rule", "body": "补记时间与开始计时在尺寸、视觉权重和首屏可达性上始终平等。", "section": "layout"},
+      {"name": "The Independent Timer Rule", "body": "每个任务拥有独立的开始时间、暂停状态和结束操作；新增或结束一个任务不得改变其他计时器的累计时间与运行状态。", "section": "layout"},
       {"name": "The Sewn Depth Rule", "body": "先用边框与内嵌缝线定义材料边缘，最后才加一层柔和投影；不要用多层浮卡代替信息层级。", "section": "elevation"},
       {"name": "The 10/14 Rule", "body": "控件以 10px 为默认圆角，承载一组信息的主要表面以 14px 为默认圆角；只有明确的中间层操作课程或弹层可偏离。", "section": "shapes"}
     ],

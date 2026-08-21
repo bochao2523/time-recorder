@@ -3,10 +3,9 @@ import { createPortal } from 'react-dom'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 import { useTimer } from '../../context/TimerContext'
 import { SessionTimer } from './SessionTimer'
-import { getSessionTargets } from '../../lib/timerStorage'
 
 export function TimerModal() {
-  const { modalOpen, closeModal, session } = useTimer()
+  const { modalOpen, closeModal, sessions } = useTimer()
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const lastFocusedRef = useRef<HTMLElement | null>(null)
@@ -72,8 +71,6 @@ export function TimerModal() {
 
   if (!modalOpen) return null
 
-  const targetCount = session ? getSessionTargets(session).length : 0
-
   return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center"
@@ -104,18 +101,12 @@ export function TimerModal() {
         <div className="flex shrink-0 items-center justify-between border-b border-dashed border-terracotta/30 px-5 pb-3 pt-2 sm:py-4">
           <div className="min-w-0 pr-2">
             <p id="timer-modal-title" className="text-base font-extrabold text-terracotta">
-              {session
-                ? session.mode === 'countdown'
-                  ? '倒计时中'
-                  : '计时中'
-                : '开始计时'}
+              {sessions.length ? `计时器 · ${sessions.length} 项` : '开始计时'}
             </p>
             <p className="mt-0.5 text-xs text-stone-light">
-              {session
-                ? targetCount > 1
-                  ? `${targetCount} 项同时计时 · 收起后仍会继续`
-                  : '收起后仍会继续'
-                : '可添加多个任务，每项都会获得完整时长'}
+              {sessions.length
+                ? '每项独立开始、暂停和结束 · 收起后仍会继续'
+                : '每个任务都会创建自己的独立计时器'}
             </p>
           </div>
           <button
@@ -124,7 +115,7 @@ export function TimerModal() {
             onClick={closeModal}
             className="min-h-11 shrink-0 rounded-[10px] border border-terracotta/25 px-3 py-2 text-sm font-bold text-terracotta active:bg-cream-dark"
           >
-            {session ? '收起' : '关闭'}
+            {sessions.length ? '收起' : '关闭'}
           </button>
         </div>
 

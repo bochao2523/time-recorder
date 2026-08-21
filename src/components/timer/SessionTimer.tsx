@@ -4,103 +4,70 @@ import { useCategories } from '../../context/useCategories'
 import type { Category } from '../../types'
 import {
   formatElapsed,
-  formatSessionTargetNames,
-  getSessionTargets,
+  getDisplayMs,
+  MAX_ACTIVE_TIMERS,
   MAX_TIMER_MS,
-  normalizeTimerTargets,
-  type TimerTarget,
   type TimerMode,
 } from '../../lib/timerStorage'
 import { today } from '../../lib/dateUtils'
 
 const COUNTDOWN_PRESETS = [15, 25, 45, 60] as const
 const MAX_COUNTDOWN_MINUTES = Math.floor(MAX_TIMER_MS / 60_000)
-const MAX_SIMULTANEOUS_TASKS = 8
-
-interface TimerTargetDraft {
-  id: string
-  taskName: string
-  category: Category
-}
 
 interface SessionTimerProps {
-  /** 结束后关闭弹层等 */
   onFinished?: () => void
 }
 
 export function SessionTimer({ onFinished }: SessionTimerProps) {
-  const { session, displayMs, start, pause, resume, stop, discard, pushNotice } = useTimer()
+  const {
+    sessions,
+    now,
+    pendingReadingCompletion,
+    start,
+    pause,
+    resume,
+    stop,
+    discard,
+    pushNotice,
+  } = useTimer()
   const { activeCategories, getCategory } = useCategories()
-  const nextTargetIdRef = useRef(1)
-  const [draftTargets, setDraftTargets] = useState<TimerTargetDraft[]>(() => [{
-    id: 'timer-target-0',
-    taskName: '',
-    category: activeCategories[0]?.id ?? 'study',
-  }])
+  const [showCreate, setShowCreate] = useState(() => sessions.length === 0)
+  const [taskName, setTaskName] = useState('')
+  const [category, setCategory] = useState<Category>(() => activeCategories[0]?.id ?? 'study')
   const [mode, setMode] = useState<TimerMode>('stopwatch')
   const [durationMinutes, setDurationMinutes] = useState(25)
-  /** 自定义输入展示：删光时为空，不强制显示 0 */
   const [durationInput, setDurationInput] = useState('25')
+  const [confirmDiscardId, setConfirmDiscardId] = useState<string | null>(null)
+  const cancelDiscardRef = useRef<HTMLButtonElement>(null)
+  const discardButtonRefs = useRef(new Map<string, HTMLButtonElement>())
 
   useEffect(() => {
-    if (!session) return
-    setDraftTargets([{
-      id: `timer-target-${nextTargetIdRef.current++}`,
-      taskName: '',
-      category: activeCategories[0]?.id ?? 'study',
-    }])
-  }, [session, activeCategories])
+    if (activeCategories.some((item) => item.id === category)) return
+    setCategory(activeCategories[0]?.id ?? 'study')
+  }, [activeCategories, category])
 
   useEffect(() => {
-    const fallback = activeCategories[0]?.id ?? 'study'
-    setDraftTargets((current) => {
-      let changed = false
-      const next = current.map((target) => {
-        if (activeCategories.some((item) => item.id === target.category)) return target
-        changed = true
-        return { ...target, category: fallback }
-      })
-      return changed ? next : current
-    })
-  }, [activeCategories])
+    if (category === 'reading' && mode === 'countdown') setMode('stopwatch')
+  }, [category, mode])
 
-  const updateDraftTarget = (id: string, patch: Partial<TimerTargetDraft>) => {
-    setDraftTargets((current) => current.map((target) => (
-      target.id === id ? { ...target, ...patch } : target
-    )))
-  }
+  useEffect(() => {
+    if (!confirmDiscardId) return
+    const frame = window.requestAnimationFrame(() => cancelDiscardRef.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [confirmDiscardId])
 
-  const addDraftTarget = () => {
-    setDraftTargets((current) => {
-      if (current.length >= MAX_SIMULTANEOUS_TASKS) return current
-      const usedCategories = new Set(current.map((target) => target.category))
-      const nextCategory = activeCategories.find((item) => !usedCategories.has(item.id))?.id
-        ?? activeCategories[0]?.id
-        ?? 'study'
-      return [...current, {
-        id: `timer-target-${nextTargetIdRef.current++}`,
-        taskName: '',
-        category: nextCategory,
-      }]
-    })
-  }
-
-  const removeDraftTarget = (id: string) => {
-    setDraftTargets((current) => current.length > 1
-      ? current.filter((target) => target.id !== id)
-      : current)
-  }
+  useEffect(() => {
+    if (sessions.length === 0) setShowCreate(true)
+  }, [sessions.length])
 
   const handleStart = () => {
-    const requestedTargets: TimerTarget[] = draftTargets.map((target) => ({
-      category: target.category,
-      taskName: target.taskName.trim() || getCategory(target.category).label,
-    }))
-    const targets = normalizeTimerTargets(requestedTargets)
-    if (targets.length !== requestedTargets.length) {
-      pushNotice({ message: '有重复任务，请修改后再开始', type: 'error' })
+    const definition = getCategory(category)
+    const trimmedName = taskName.trim()
+    if (category === 'reading' && !trimmedName) {
+      pushNotice({ message: '阅读计时需要填写书名', type: 'error' })
       return
     }
+    const name = trimmedName || definition.label
     if (mode === 'countdown') {
       if (!Number.isInteger(durationMinutes) || durationMinutes < 1) {
         pushNotice({ message: '倒计时至少 1 分钟', type: 'error' })
@@ -111,311 +78,253 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
         return
       }
     }
-    const primary = targets[0]
-    const ok = start(primary.taskName, primary.category, {
+    const ok = start(name, category, {
       date: today(),
       mode,
-      targets,
       durationMinutes: mode === 'countdown' ? durationMinutes : undefined,
+      completionKind: category === 'reading' ? 'reading' : undefined,
     })
     if (!ok) {
-      pushNotice({ message: '计时未开始，请重试', type: 'error' })
+      pushNotice({
+        message: pendingReadingCompletion
+          ? '请先填写上一次阅读的页码'
+          : sessions.length >= MAX_ACTIVE_TIMERS
+            ? `最多同时运行 ${MAX_ACTIVE_TIMERS} 个计时器`
+            : `「${name}」已经在计时`,
+        type: 'error',
+      })
+      return
     }
+    setTaskName('')
+    setShowCreate(false)
   }
 
-  const handleStop = () => {
-    stop()
-    onFinished?.()
-  }
-
-  const handleDiscard = () => {
-    discard()
-    pushNotice({ message: '本次计时已删除', type: 'error' })
-    onFinished?.()
-  }
-
-  if (session) {
-    const targets = getSessionTargets(session)
-    const isPaused = session.status === 'paused'
-    const isCountdown = session.mode === 'countdown'
-    const totalLabel =
-      isCountdown && session.durationMs
-        ? `设定 ${Math.round(session.durationMs / 60_000)} 分钟`
-        : null
-
-    return (
-      <div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-medium text-stone-light">
-            {isPaused ? '已暂停' : isCountdown ? '倒计时中' : '计时中'}
-          </span>
-          {!isPaused && (
-            <span className="inline-flex h-2 w-2 rounded-full bg-chrome-yellow" />
-          )}
-        </div>
-
-        <h3 className="mt-2 text-xl font-semibold text-stone-800">
-          {targets.length > 1 ? `${targets.length} 项同时计时` : formatSessionTargetNames(session)}
-        </h3>
-        <div className="mt-2 flex flex-wrap gap-1.5" aria-label="本次计时任务">
-          {targets.map((target) => {
-            const definition = getCategory(target.category)
-            return (
-              <span
-                key={`${target.category}-${target.taskName}`}
-                className="inline-flex min-h-7 items-center gap-1.5 rounded-[8px] border bg-calico px-2 py-1 text-xs font-bold text-stone-800"
-                style={{ borderColor: definition.color }}
-              >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: definition.color }} />
-                {target.taskName}
-                {target.taskName !== definition.label && (
-                  <span className="font-medium text-stone-light">· {definition.label}</span>
-                )}
-              </span>
-            )
-          })}
-        </div>
-        <p className="mt-2 text-xs text-stone-light">
-          {targets.length > 1 ? '结束后每项都会获得完整时长' : getCategory(targets[0].category).label}
-          {totalLabel && ` · ${totalLabel}`}
-        </p>
-
-        <div className="mt-6 rounded-2xl bg-cream px-4 py-6 text-center">
-          <p className="text-xs text-stone-light">{isCountdown ? '剩余时间' : '已计时'}</p>
-          <p className="stable-timer-slot depot-display mt-1 text-5xl font-extrabold tracking-[0.04em] text-terracotta tabular-nums">
-            {formatElapsed(displayMs)}
-          </p>
-          <p className="mt-2 text-xs text-stone-light">
-            离开页面不会中断{isCountdown ? ' · 到时自动保存' : ''}
-          </p>
-        </div>
-
-        <div className="mt-5 flex gap-2">
-          {isPaused ? (
-            <button
-              type="button"
-              onClick={resume}
-              className="min-h-11 flex-1 rounded-xl bg-sage py-3 text-sm font-medium text-white transition-colors hover:bg-sage/90"
-            >
-              继续
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={pause}
-              className="min-h-11 flex-1 rounded-xl border border-cream-dark bg-cream py-3 text-sm font-medium text-stone-800 transition-colors hover:bg-cream-dark"
-            >
-              暂停
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={handleStop}
-            className="min-h-11 flex-1 rounded-xl bg-terracotta py-3 text-sm font-medium text-white transition-colors hover:bg-terracotta/90"
-          >
-            结束并保存
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={handleDiscard}
-          className="mt-3 min-h-11 w-full py-2 text-center text-xs text-stone-light transition-colors hover:text-stone-800"
-        >
-          删除本次计时
-        </button>
-      </div>
-    )
-  }
-
-  const canStart =
-    mode === 'stopwatch' ||
-      (Number.isInteger(durationMinutes) &&
-        durationMinutes >= 1 &&
-        durationMinutes <= MAX_COUNTDOWN_MINUTES)
+  const canStart = mode === 'stopwatch' || (
+    Number.isInteger(durationMinutes) &&
+    durationMinutes >= 1 &&
+    durationMinutes <= MAX_COUNTDOWN_MINUTES
+  )
 
   return (
-    <div>
-      <ol className="space-y-5">
-        <li>
-          <div className="flex items-baseline gap-2">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-stone-800">计时方式</p>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {(
-                  [
-                    { id: 'stopwatch', label: '自由计时', hint: '不限时' },
-                    { id: 'countdown', label: '倒计时', hint: '设定时间' },
-                  ] as const
-                ).map((item) => {
-                  const active = mode === item.id
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setMode(item.id)}
-                      className={`min-h-11 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                        active
-                          ? 'bg-terracotta text-white shadow-sm'
-                          : 'bg-cream text-stone-800 hover:bg-cream-dark'
-                      }`}
-                    >
-                      <span className="block text-sm font-medium">{item.label}</span>
-                      <span className={`mt-0.5 block text-xs ${active ? 'text-white/80' : 'text-stone-light'}`}>
-                        {item.hint}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </li>
-
-        <li>
+    <div className="space-y-5">
+      {sessions.length > 0 && (
+        <section aria-labelledby="active-timers-title">
           <div className="flex items-end justify-between gap-3">
-            <p className="text-sm font-medium text-stone-800">计时任务</p>
-            <p className="text-right text-[11px] font-medium text-stone-light">
-              {draftTargets.length} 项 × 完整时长
-            </p>
+            <div>
+              <h3 id="active-timers-title" className="text-base font-extrabold text-terracotta">独立计时器</h3>
+              <p className="mt-0.5 text-xs text-stone-light">每项可以分别暂停和结束</p>
+            </div>
+            <span className="depot-display text-sm font-extrabold tabular-nums text-terracotta">{sessions.length}/{MAX_ACTIVE_TIMERS}</span>
           </div>
-          <div className="mt-2 space-y-2.5">
-            {draftTargets.map((target, index) => (
-              <div
-                key={target.id}
-                className="rounded-[12px] border border-terracotta/25 bg-cream/70 p-2.5"
-              >
-                <div className="mb-2 flex min-h-7 items-center justify-between gap-2">
-                  <p className="text-xs font-bold text-terracotta">任务 {index + 1}</p>
-                  {draftTargets.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeDraftTarget(target.id)}
-                      aria-label={`删除任务 ${index + 1}`}
-                      className="flex h-9 w-9 items-center justify-center rounded-[8px] text-stone-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chrome-yellow active:bg-cream-dark active:text-terracotta"
-                    >
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5" /></svg>
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-[7.25rem_minmax(0,1fr)] gap-2">
-                  <label className="relative min-w-0">
-                    <span className="sr-only">任务 {index + 1} 大类</span>
-                    <select
-                      value={target.category}
-                      onChange={(event) => updateDraftTarget(target.id, { category: event.target.value })}
-                      className="min-h-12 w-full appearance-none rounded-[10px] border border-terracotta/25 bg-calico py-2 pl-3 pr-8 text-base font-bold text-terracotta focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
-                    >
-                      {activeCategories.map((definition) => (
-                        <option key={definition.id} value={definition.id}>{definition.label}</option>
-                      ))}
-                    </select>
-                    <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-terracotta" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 9 6 6 6-6" /></svg>
-                  </label>
-                  <input
-                    type="text"
-                    value={target.taskName}
-                    onChange={(event) => updateDraftTarget(target.id, { taskName: event.target.value })}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') handleStart()
-                    }}
-                    placeholder="具体项目（可不填）"
-                    aria-label={`任务 ${index + 1} 具体项目（可选）`}
-                    className="min-h-12 min-w-0 rounded-[10px] border border-terracotta/25 bg-calico px-3 py-2 text-base placeholder:text-stone-400 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
-                  />
-                </div>
-              </div>
-            ))}
 
-            <button
-              type="button"
-              onClick={addDraftTarget}
-              disabled={draftTargets.length >= MAX_SIMULTANEOUS_TASKS}
-              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[10px] border border-dashed border-terracotta/40 bg-calico px-3 py-2 text-sm font-bold text-terracotta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chrome-yellow active:bg-cream-dark disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
-              {draftTargets.length >= MAX_SIMULTANEOUS_TASKS ? '最多同时记录 8 项' : '同时记录另一个任务'}
-            </button>
-          </div>
-          {draftTargets.length > 1 && (
-            <p className="mt-2 text-xs leading-5 text-stone-light">
-              例如计时 30 分钟，{draftTargets.length} 项任务会累计 {draftTargets.length * 30} 分钟。
-            </p>
-          )}
-        </li>
+          <ol className="mt-3 space-y-2.5">
+            {sessions.map((timer) => {
+              const definition = getCategory(timer.category)
+              const isPaused = timer.status === 'paused'
+              const isCountdown = timer.mode === 'countdown'
+              return (
+                <li key={timer.id} className="rounded-[12px] border border-terracotta/25 bg-cream p-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span
+                      className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: isPaused ? '#a49b84' : definition.color }}
+                      aria-hidden
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-extrabold text-terracotta">{timer.taskName}</p>
+                      <p className="mt-0.5 text-[11px] text-stone-light">
+                        {definition.label}{isCountdown ? ' · 倒计时' : ''}{isPaused ? ' · 已暂停' : ' · 计时中'}
+                      </p>
+                    </div>
+                    <p className="stable-timer-slot depot-display shrink-0 text-right text-2xl font-extrabold tabular-nums text-terracotta">
+                      {isCountdown ? '剩 ' : ''}{formatElapsed(getDisplayMs(timer, now))}
+                    </p>
+                  </div>
 
-        {mode === 'countdown' && (
-          <li>
-            <div className="flex items-baseline gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-stone-800">时长</p>
-                <p className="mt-0.5 text-xs text-stone-light">
-                  到时自动保存
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {COUNTDOWN_PRESETS.map((mins) => {
-                    const active = durationInput !== '' && durationMinutes === mins
-                    return (
+                  <div className="mt-3 grid grid-cols-[1fr_1fr_auto] gap-2 border-t border-dashed border-terracotta/20 pt-3">
+                    {confirmDiscardId === timer.id ? <>
                       <button
-                        key={mins}
+                        ref={cancelDiscardRef}
                         type="button"
                         onClick={() => {
-                          setDurationMinutes(mins)
-                          setDurationInput(String(mins))
+                          const timerId = timer.id
+                          setConfirmDiscardId(null)
+                          window.requestAnimationFrame(() => discardButtonRefs.current.get(timerId)?.focus())
                         }}
-                        className={`min-h-11 rounded-xl px-3 py-2 text-sm transition-colors ${
-                          active
-                            ? 'bg-terracotta text-white'
-                            : 'bg-cream text-stone-800 hover:bg-cream-dark'
-                        }`}
+                        className="min-h-11 rounded-[8px] border border-terracotta/25 text-xs font-bold text-terracotta active:bg-cream-dark"
                       >
-                        {mins} 分
+                        取消
                       </button>
-                    )
-                  })}
-                </div>
-                <label className="mt-3 flex items-center gap-2 text-sm text-stone-light">
-                  自定义
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={durationInput}
-                    onChange={(e) => {
-                      const digits = e.target.value.replace(/\D/g, '')
-                      if (digits === '') {
-                        setDurationInput('')
-                        setDurationMinutes(0)
-                        return
-                      }
-                      // parseInt 去掉前导零：01 → 1
-                      const n = parseInt(digits, 10)
-                      setDurationMinutes(n)
-                      setDurationInput(String(n))
-                    }}
-                    className="min-h-11 w-24 rounded-xl border border-cream-dark bg-white px-3 py-2 text-sm text-stone-800 focus:border-terracotta focus:outline-none"
-                  />
-                  分钟
-                </label>
-              </div>
-            </div>
-          </li>
-        )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          discard(timer.id)
+                          setConfirmDiscardId(null)
+                        }}
+                        className="col-span-2 min-h-11 rounded-[8px] bg-red-800 text-xs font-extrabold text-white active:opacity-85"
+                      >
+                        确认删除，不保存
+                      </button>
+                    </> : <>
+                      <button
+                        type="button"
+                        onClick={() => isPaused ? resume(timer.id) : pause(timer.id)}
+                        className="min-h-11 rounded-[8px] border border-terracotta/25 text-xs font-bold text-terracotta active:bg-cream-dark"
+                      >
+                        {isPaused ? '继续' : '暂停'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          stop(timer.id)
+                          if (timer.completionKind === 'reading') onFinished?.()
+                        }}
+                        className="min-h-11 rounded-[8px] bg-terracotta text-xs font-extrabold text-calico active:opacity-85"
+                      >
+                        {timer.completionKind === 'reading' ? '结束并填页码' : '结束并保存'}
+                      </button>
+                      <button
+                        ref={(element) => {
+                          if (element) discardButtonRefs.current.set(timer.id, element)
+                          else discardButtonRefs.current.delete(timer.id)
+                        }}
+                        type="button"
+                        onClick={() => setConfirmDiscardId(timer.id)}
+                        aria-label={`删除「${timer.taskName}」计时`}
+                        className="flex h-11 w-11 items-center justify-center rounded-[8px] text-stone-light active:bg-cream-dark active:text-terracotta"
+                      >
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5" /></svg>
+                      </button>
+                    </>}
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+        </section>
+      )}
 
-        <li>
-          <div className="flex items-baseline gap-2">
-            <div className="min-w-0 flex-1">
-              <button
-                type="button"
-                onClick={handleStart}
-                disabled={!canStart}
-                className="min-h-11 w-full rounded-xl bg-terracotta py-3 text-sm font-medium text-white transition-colors hover:bg-terracotta/90 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {mode === 'countdown' ? `开始 ${durationMinutes || '—'} 分钟倒计时` : '开始计时'}
-              </button>
+      {sessions.length < MAX_ACTIVE_TIMERS && !showCreate && (
+        <button
+          type="button"
+          onClick={() => setShowCreate(true)}
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[10px] border border-dashed border-terracotta/40 bg-calico text-sm font-extrabold text-terracotta active:bg-cream-dark"
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
+          新建一个独立计时器
+        </button>
+      )}
+
+      {showCreate && sessions.length < MAX_ACTIVE_TIMERS && (
+        <section className={sessions.length ? 'border-t border-dashed border-terracotta/30 pt-5' : ''} aria-labelledby="create-timer-title">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 id="create-timer-title" className="text-base font-extrabold text-terracotta">开始新的计时</h3>
+              <p className="mt-0.5 text-xs text-stone-light">不会影响已经运行的任务</p>
             </div>
+            {sessions.length > 0 && (
+              <button type="button" onClick={() => setShowCreate(false)} className="min-h-11 px-2 text-xs font-bold text-stone-light active:text-terracotta">收起</button>
+            )}
           </div>
-        </li>
-      </ol>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {([
+              { id: 'stopwatch', label: '自由计时', hint: '不限时' },
+              { id: 'countdown', label: '倒计时', hint: '到时独立保存' },
+            ] as const).map((item) => {
+              const active = mode === item.id
+              const disabled = category === 'reading' && item.id === 'countdown'
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setMode(item.id)}
+                  disabled={disabled}
+                  className={`min-h-12 rounded-[10px] border px-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-40 ${active ? 'border-terracotta bg-terracotta text-calico' : 'border-terracotta/25 bg-calico text-terracotta'}`}
+                >
+                  <span className="block text-sm font-bold">{item.label}</span>
+                  <span className={`mt-0.5 block text-[11px] ${active ? 'text-calico/70' : 'text-stone-light'}`}>
+                    {disabled ? '阅读结束后需填页码' : item.hint}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="mt-3 grid grid-cols-[7.5rem_minmax(0,1fr)] gap-2">
+            <label className="relative min-w-0">
+              <span className="sr-only">任务大类</span>
+              <select
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+                className="min-h-12 w-full appearance-none rounded-[10px] border border-terracotta/25 bg-calico py-2 pl-3 pr-8 text-base font-bold text-terracotta focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
+              >
+                {activeCategories.map((definition) => (
+                  <option key={definition.id} value={definition.id}>{definition.label}</option>
+                ))}
+              </select>
+              <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-terracotta" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 9 6 6 6-6" /></svg>
+            </label>
+            <input
+              type="text"
+              value={taskName}
+              onChange={(event) => setTaskName(event.target.value.slice(0, 80))}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') handleStart()
+              }}
+              placeholder="具体项目（可不填）"
+              aria-label="任务名称（可选）"
+              className="min-h-12 min-w-0 rounded-[10px] border border-terracotta/25 bg-calico px-3 text-base placeholder:text-stone-400 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
+            />
+          </div>
+
+          {mode === 'countdown' && (
+            <div className="mt-3">
+              <p className="text-xs font-bold text-terracotta">倒计时时长</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {COUNTDOWN_PRESETS.map((minutes) => (
+                  <button
+                    key={minutes}
+                    type="button"
+                    onClick={() => {
+                      setDurationMinutes(minutes)
+                      setDurationInput(String(minutes))
+                    }}
+                    className={`min-h-11 rounded-[8px] border px-3 text-sm font-bold ${durationInput && durationMinutes === minutes ? 'border-terracotta bg-terracotta text-calico' : 'border-terracotta/25 bg-calico text-terracotta'}`}
+                  >
+                    {minutes} 分
+                  </button>
+                ))}
+              </div>
+              <label className="mt-2 flex items-center gap-2 text-xs font-bold text-stone-light">
+                自定义
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={durationInput}
+                  onChange={(event) => {
+                    const digits = event.target.value.replace(/\D/g, '')
+                    setDurationInput(digits)
+                    setDurationMinutes(digits ? parseInt(digits, 10) : 0)
+                  }}
+                  className="depot-display min-h-11 w-24 rounded-[8px] border border-terracotta/25 bg-calico px-3 text-center text-base font-bold tabular-nums text-terracotta focus:border-terracotta focus:bg-white focus:outline-none"
+                />
+                分钟
+              </label>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleStart}
+            disabled={!canStart || Boolean(pendingReadingCompletion)}
+            className="mt-4 min-h-12 w-full rounded-[10px] bg-chrome-yellow px-4 text-sm font-extrabold text-terracotta disabled:cursor-not-allowed disabled:opacity-40 active:bg-[#e8bf00]"
+          >
+            开始这个计时器
+          </button>
+        </section>
+      )}
     </div>
   )
 }

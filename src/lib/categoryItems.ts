@@ -156,7 +156,7 @@ export function appendTaskMinutesToRecord(
   )
 }
 
-/** 同一次计时的每个任务都获得完整时长，因此总时长会按任务数累加。 */
+/** 将已完成计时写入对应任务；旧版多目标记录仍可一次迁移写入。 */
 export function appendTimerTargetsToRecord(
   existing: DailyRecord | undefined,
   date: string,

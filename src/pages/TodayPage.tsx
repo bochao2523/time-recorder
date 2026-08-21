@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PageCard } from '../components/layout/Layout'
 import { DatePicker } from '../components/common/DatePicker'
 import { CategoryInput } from '../components/common/CategoryInput'
@@ -20,7 +20,7 @@ import {
 import { formatDisplayDate, formatMinutes, today } from '../lib/dateUtils'
 import {
   formatElapsed,
-  formatSessionTargetNames,
+  getDisplayMs,
   getSessionTargets,
 } from '../lib/timerStorage'
 import { useCategories } from '../context/useCategories'
@@ -72,8 +72,9 @@ function formatSummaryTotal(minutes: number): string {
 
 export function TodayPage() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const { records, getRecordByDate, upsertRecord, deleteRecord } = useRecords()
-  const { session, displayMs, start, openModal, pause, resume, pushNotice } = useTimer()
+  const { sessions, now, start, openModal, pushNotice } = useTimer()
   const { activeCategories, getCategory } = useCategories()
 
   const initialDate = searchParams.get('date') ?? today()
@@ -121,10 +122,11 @@ export function TodayPage() {
     return [...activeCategories, ...archivedWithTime]
   }, [activeCategories, subItems, getCategory])
 
-  const sessionTargets = useMemo(
-    () => session ? getSessionTargets(session) : [],
-    [session],
+  const activeTimerTargets = useMemo(
+    () => sessions.flatMap((timer) => getSessionTargets(timer)),
+    [sessions],
   )
+  const primaryTimer = sessions[0] ?? null
 
   const handleSubItemsChange = useCallback((cat: Category, items: CategorySubItems[Category]) => {
     setSubItems((prev) => ({ ...prev, [cat]: items ?? [] }))
@@ -140,35 +142,28 @@ export function TodayPage() {
         return
       }
 
-      if (
-        session &&
-        sessionTargets.some((target) => (
+      const existingTimer = sessions.find((timer) => (
+        getSessionTargets(timer).some((target) => (
           target.category === cat && target.taskName.trim() === name
         ))
-      ) {
+      ))
+      if (existingTimer) {
         openModal()
         return
       }
 
-      if (session) {
-        pushNotice({
-          message: sessionTargets.length > 1
-            ? `${sessionTargets.length} 项任务正在同时计时`
-            : `「${formatSessionTargetNames(session)}」正在计时`,
-          type: 'error',
-        })
-        openModal()
-        return
-      }
-
-      const ok = start(name, cat, { date: selectedDate, mode: 'stopwatch' })
+      const ok = start(name, cat, {
+        date: selectedDate,
+        mode: 'stopwatch',
+        completionKind: cat === 'reading' ? 'reading' : undefined,
+      })
       if (!ok) {
-        pushNotice({ message: '计时未开始，请重试', type: 'error' })
+        pushNotice({ message: '计时未开始，可能已达到 8 个计时器上限', type: 'error' })
         return
       }
-      openModal()
+      pushNotice({ message: `已开始「${name}」独立计时`, type: 'success' })
     },
-    [session, sessionTargets, start, openModal, pushNotice, selectedDate],
+    [sessions, start, openModal, pushNotice, selectedDate],
   )
 
   /** 无需填写小类，直接按大类开始正计时 */
@@ -176,36 +171,39 @@ export function TodayPage() {
     (cat: Category) => {
       const label = getCategory(cat).label
 
-      if (
-        session &&
-        sessionTargets.some((target) => (
-          target.category === cat && target.taskName.trim() === label
-        ))
-      ) {
-        openModal()
+      if (cat === 'reading') {
+        navigate('/reading')
+        pushNotice({ message: '请先选择或填写书名，再开始阅读计时', type: 'success' })
         return
       }
 
-      if (session) {
-        pushNotice({
-          message: sessionTargets.length > 1
-            ? `${sessionTargets.length} 项任务正在同时计时`
-            : `「${formatSessionTargetNames(session)}」正在计时`,
-          type: 'error',
-        })
+      const existingTimer = sessions.find((timer) => (
+        getSessionTargets(timer).some((target) => (
+          target.category === cat && target.taskName.trim() === label
+        ))
+      ))
+      if (existingTimer) {
         openModal()
         return
       }
 
       const ok = start(label, cat, { date: selectedDate, mode: 'stopwatch' })
       if (!ok) {
-        pushNotice({ message: '计时未开始，请重试', type: 'error' })
+        pushNotice({ message: '计时未开始，可能已达到 8 个计时器上限', type: 'error' })
         return
       }
-      openModal()
+      pushNotice({ message: `已开始「${label}」独立计时`, type: 'success' })
     },
-    [getCategory, session, sessionTargets, start, openModal, pushNotice, selectedDate],
+    [getCategory, navigate, sessions, start, openModal, pushNotice, selectedDate],
   )
+
+  const focusManualEntry = useCallback(() => {
+    const section = document.getElementById('manual-entry')
+    section?.scrollIntoView({ block: 'start' })
+    window.requestAnimationFrame(() => {
+      section?.querySelector<HTMLElement>('button, input')?.focus({ preventScroll: true })
+    })
+  }, [])
 
   const markSaved = useCallback(() => {
     setSaveStatus('saved')
@@ -296,14 +294,27 @@ export function TodayPage() {
           </div>
         </div>
 
-        <div className="relative mt-4 border-t border-chrome-yellow/35 pt-4">
+        <div className="relative mt-4 grid grid-cols-2 gap-2 border-t border-chrome-yellow/35 pt-4">
+          <button
+            type="button"
+            onClick={focusManualEntry}
+            className="calico-surface stitched-light flex min-h-16 min-w-0 items-center justify-center gap-2 rounded-[12px] px-2 text-left text-sm font-extrabold text-terracotta active:bg-cream-dark"
+          >
+            <svg className="shrink-0" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+            <span className="min-w-0 leading-tight">补记时间<span className="mt-1 block text-[11px] font-semibold text-stone-light">填写已有记录</span></span>
+          </button>
           <button
             type="button"
             onClick={openModal}
-            className="calico-surface stitched-light flex min-h-16 w-full items-center justify-center gap-3 rounded-[12px] px-4 text-left text-sm font-extrabold text-terracotta active:bg-cream-dark"
+            className="calico-surface stitched-light flex min-h-16 min-w-0 items-center justify-center gap-2 rounded-[12px] px-2 text-left text-sm font-extrabold text-terracotta active:bg-cream-dark"
           >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4V8Z" /></svg>
-            <span className="leading-tight">开始计时<span className="mt-1 block text-xs font-semibold text-stone-light">可选一个或多个任务，具体项目可不填</span></span>
+            <svg className="shrink-0" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4V8Z" /></svg>
+            <span className="min-w-0 leading-tight">
+              {sessions.length ? '管理计时器' : '开始计时'}
+              <span className="mt-1 block text-[11px] font-semibold text-stone-light">
+                {sessions.length ? `${sessions.length} 项分别控制` : '可连续添加任务'}
+              </span>
+            </span>
           </button>
           <span className="depot-eyelet absolute -bottom-1 -right-1 scale-75" aria-hidden />
         </div>
@@ -312,28 +323,28 @@ export function TodayPage() {
       <section className="depot-cloth stitched-panel flex min-h-[5.5rem] items-center gap-3 overflow-hidden rounded-[14px] px-4 py-3" aria-label="当前计时">
         <div className="min-w-0 flex-1">
           <p className="depot-display text-xs font-extrabold tracking-[0.08em] text-chrome-yellow/80">
-            {session
-              ? `${session.status === 'paused' ? '已暂停' : '正在计时'} · ${sessionTargets.length > 1 ? `${sessionTargets.length} 项任务` : getCategory(session.category).label}`
+            {primaryTimer
+              ? `${sessions.length} 个独立计时器 · ${sessions.filter((timer) => timer.status === 'running').length} 个运行中`
               : '当前没有计时'}
           </p>
           <p className="mt-1 truncate text-base font-bold text-chrome-yellow">
-            {session ? formatSessionTargetNames(session) : '选择任务开始'}
+            {primaryTimer
+              ? sessions.length === 1 ? primaryTimer.taskName : `${primaryTimer.taskName} 等 ${sessions.length} 项`
+              : '选择任务开始'}
           </p>
         </div>
         <p className="stable-timer-slot depot-display shrink-0 text-right text-2xl font-extrabold tracking-[0.04em] text-chrome-yellow">
-          {session ? formatElapsed(displayMs) : '00:00:00'}
+          {primaryTimer ? formatElapsed(getDisplayMs(primaryTimer, now)) : '00:00:00'}
         </p>
         <button
           type="button"
-          onClick={session ? (session.status === 'paused' ? resume : pause) : openModal}
-          aria-label={session ? (session.status === 'paused' ? '继续计时' : '暂停计时') : '开始计时'}
+          onClick={openModal}
+          aria-label={sessions.length ? '管理独立计时器' : '开始计时'}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] border border-chrome-yellow/65 text-chrome-yellow active:bg-chrome-yellow active:text-terracotta"
         >
-          {session?.status === 'paused' || !session ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="m8 5 11 7-11 7V5Z" /></svg>
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M7 5h4v14H7zM13 5h4v14h-4z" /></svg>
-          )}
+          {sessions.length ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          ) : <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="m8 5 11 7-11 7V5Z" /></svg>}
         </button>
       </section>
 
@@ -352,12 +363,12 @@ export function TodayPage() {
             onQuickTimer={(item) => handleQuickTimer(definition.id, item)}
             onCategoryTimer={() => handleCategoryTimer(definition.id)}
             categoryTimerActive={
-              sessionTargets.some((target) => (
+              activeTimerTargets.some((target) => (
                 target.category === definition.id &&
                 target.taskName.trim() === definition.label
               ))
             }
-            activeTaskNames={sessionTargets
+            activeTaskNames={activeTimerTargets
               .filter((target) => target.category === definition.id)
               .map((target) => target.taskName)}
           />

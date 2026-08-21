@@ -1,18 +1,13 @@
 import { useTimer } from '../../context/TimerContext'
-import { formatElapsed, formatSessionTargetNames, getSessionTargets } from '../../lib/timerStorage'
-import { useCategories } from '../../context/useCategories'
+import { formatElapsed, getDisplayMs } from '../../lib/timerStorage'
 
 /** 顶栏入口：打开计时弹层；进行中时显示当前时长 */
 export function TimerHeaderButton({ hideIdle = false }: { hideIdle?: boolean }) {
-  const { session, displayMs, openModal } = useTimer()
-  const { getCategory } = useCategories()
+  const { sessions, now, openModal } = useTimer()
 
-  if (session) {
-    const targets = getSessionTargets(session)
-    const definition = getCategory(session.category)
-    const color = definition.color
-    const isPaused = session.status === 'paused'
-    const isCountdown = session.mode === 'countdown'
+  if (sessions.length) {
+    const primary = sessions[0]
+    const runningCount = sessions.filter((timer) => timer.status === 'running').length
 
     return (
       <button
@@ -21,18 +16,17 @@ export function TimerHeaderButton({ hideIdle = false }: { hideIdle?: boolean }) 
         className="depot-cloth flex min-h-11 max-w-[11rem] items-center gap-2 rounded-[10px] border border-chrome-yellow/45 px-3 text-left active:bg-depot-deep sm:max-w-[14rem]"
       >
         <span
-          className={`h-2 w-2 shrink-0 rounded-full ${isPaused ? 'bg-calico/60' : 'bg-chrome-yellow'}`}
+          className={`h-2 w-2 shrink-0 rounded-full ${runningCount ? 'bg-chrome-yellow' : 'bg-calico/60'}`}
         />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-xs font-bold text-chrome-yellow">{formatSessionTargetNames(session)}</span>
+          <span className="block truncate text-xs font-bold text-chrome-yellow">
+            {sessions.length === 1 ? primary.taskName : `${sessions.length} 个计时器`}
+          </span>
           <span className="flex items-center gap-1 text-[10px] text-chrome-yellow/70">
             <span className="depot-display stable-timer-slot font-bold tabular-nums text-chrome-yellow">
-              {isCountdown ? '剩 ' : ''}
-              {formatElapsed(displayMs)}
+              {primary.mode === 'countdown' ? '剩 ' : ''}{formatElapsed(getDisplayMs(primary, now))}
             </span>
-            <span style={{ color: color.toLowerCase() === '#0e3a2e' ? undefined : color }}>
-              · {targets.length > 1 ? `${targets.length} 项同时` : definition.label}
-            </span>
+            <span>· {runningCount} 运行</span>
           </span>
         </span>
       </button>

@@ -12,8 +12,9 @@ import type { Category } from '../types'
 import { appendReadingSessionToRecord, appendTimerTargetsToRecord } from '../lib/categoryItems'
 import { today } from '../lib/dateUtils'
 import {
-  clearActiveTimer,
+  clearActiveTimers,
   clearPendingReadingCompletion,
+  createTimerId,
   elapsedMsToMinutes,
   formatSessionTargetNames,
   getDisplayMs,
@@ -21,24 +22,25 @@ import {
   getSessionTargets,
   isCountdownFinished,
   isTimerExpired,
-  loadActiveTimer,
+  loadActiveTimers,
   loadPendingReadingCompletion,
+  MAX_ACTIVE_TIMERS,
   MAX_TIMER_MS,
   MIN_COUNTDOWN_MS,
   normalizeTimerTargets,
   PENDING_COMPLETE_KEY,
-  saveActiveTimer,
+  saveActiveTimers,
   savePendingReadingCompletion,
   type ActiveTimerSession,
   type PendingReadingCompletion,
-  type TimerTarget,
-  type TimerMode,
   type TimerCompletionKind,
+  type TimerMode,
+  type TimerTarget,
 } from '../lib/timerStorage'
 import { useRecords } from './RecordsContext'
 
 export type StopTimerResult =
-  | { ok: true; minutes: number; taskName: string; category: Category; targets: TimerTarget[]; date: string }
+  | { ok: true; sessionId: string; minutes: number; taskName: string; category: Category; targets: TimerTarget[]; date: string }
   | { ok: false; reason: 'too_short' | 'no_session' | 'expired' }
 
 export type TimerNotice = {
@@ -49,16 +51,17 @@ export type TimerNotice = {
 export type StartTimerOptions = {
   date?: string
   mode?: TimerMode
-  /** 同一次计时包含的全部任务；每项都会获得完整时长 */
+  /** 兼容旧调用；传入多项时会创建多个彼此独立的计时器。 */
   targets?: TimerTarget[]
-  /** 倒计时分钟数 */
   durationMinutes?: number
-  /** 结束后进入专用收尾流程 */
   completionKind?: TimerCompletionKind
 }
 
 interface TimerContextValue {
+  sessions: ActiveTimerSession[]
+  /** 第一条计时器，保留给旧组件渐进兼容。 */
   session: ActiveTimerSession | null
+  now: number
   elapsedMs: number
   displayMs: number
   modalOpen: boolean
@@ -69,132 +72,133 @@ interface TimerContextValue {
   clearNotice: () => void
   pushNotice: (notice: TimerNotice) => void
   start: (taskName: string, category: Category, options?: StartTimerOptions) => boolean
-  pause: () => void
-  resume: () => void
-  stop: () => StopTimerResult
-  discard: () => void
+  pause: (sessionId: string) => void
+  resume: (sessionId: string) => void
+  stop: (sessionId: string) => StopTimerResult
+  discard: (sessionId: string) => void
   completeReading: (startPage: number, endPage: number) => boolean
   discardReadingCompletion: () => void
 }
 
 const TimerContext = createContext<TimerContextValue | null>(null)
 
-const EXPIRED_NOTICE: TimerNotice = {
-  message: '计时超过 5 小时，已停止且未保存',
-  type: 'error',
-}
-
 type PendingComplete = {
+  id?: string
   taskName: string
   category: Category
   targets?: TimerTarget[]
   date: string
   minutes: number
-  autoCountdown: boolean
 }
 
-function loadInitialSession(): {
-  session: ActiveTimerSession | null
-  expired: boolean
+function queueCompletedCountdowns(entries: PendingComplete[]) {
+  if (!entries.length) return
+  try {
+    sessionStorage.setItem(PENDING_COMPLETE_KEY, JSON.stringify(entries))
+  } catch {
+    // Private mode / quota errors should not block the app shell.
+  }
+}
+
+function loadInitialTimers(): {
+  sessions: ActiveTimerSession[]
+  expiredNames: string[]
 } {
-  const loaded = loadActiveTimer()
-  if (!loaded) return { session: null, expired: false }
+  const loaded = loadActiveTimers()
+  const sessions: ActiveTimerSession[] = []
+  const expiredNames: string[] = []
+  const completed: PendingComplete[] = []
 
-  if (isTimerExpired(loaded)) {
-    clearActiveTimer()
-    return { session: null, expired: true }
-  }
-
-  if (isCountdownFinished(loaded)) {
-    const ms = getElapsedMs(loaded)
-    const minutes = elapsedMsToMinutes(ms)
-    clearActiveTimer()
-    if (minutes > 0) {
-      const pending: PendingComplete = {
-        taskName: loaded.taskName,
-        category: loaded.category,
-        targets: getSessionTargets(loaded),
-        date: loaded.date,
-        minutes,
-        autoCountdown: true,
-      }
-      try {
-        sessionStorage.setItem(PENDING_COMPLETE_KEY, JSON.stringify(pending))
-      } catch {
-        // ignore quota / private mode
-      }
+  for (const timer of loaded) {
+    if (isTimerExpired(timer)) {
+      expiredNames.push(formatSessionTargetNames(timer))
+      continue
     }
-    return { session: null, expired: false }
+    if (isCountdownFinished(timer)) {
+      const minutes = elapsedMsToMinutes(getElapsedMs(timer))
+      if (minutes > 0) {
+        completed.push({
+          id: timer.id,
+          taskName: timer.taskName,
+          category: timer.category,
+          targets: getSessionTargets(timer),
+          date: timer.date,
+          minutes,
+        })
+      }
+      continue
+    }
+    sessions.push(timer)
   }
 
-  return { session: loaded, expired: false }
+  if (sessions.length !== loaded.length) {
+    if (sessions.length) saveActiveTimers(sessions)
+    else clearActiveTimers()
+  }
+  queueCompletedCountdowns(completed)
+  return { sessions, expiredNames }
 }
 
 export function TimerProvider({ children }: { children: ReactNode }) {
   const { getRecordByDate, upsertRecord } = useRecords()
-  const initial = useMemo(() => loadInitialSession(), [])
-  const [session, setSession] = useState<ActiveTimerSession | null>(() => initial.session)
+  const initial = useMemo(() => loadInitialTimers(), [])
+  const [sessions, setSessions] = useState<ActiveTimerSession[]>(() => initial.sessions)
   const [now, setNow] = useState(() => Date.now())
   const [modalOpen, setModalOpen] = useState(false)
-  const [notice, setNotice] = useState<TimerNotice | null>(() =>
-    initial.expired ? EXPIRED_NOTICE : null,
-  )
+  const [notice, setNotice] = useState<TimerNotice | null>(() => (
+    initial.expiredNames.length
+      ? { message: `${initial.expiredNames.join('、')} 超过 5 小时，已停止且未保存`, type: 'error' }
+      : null
+  ))
   const [pendingReadingCompletion, setPendingReadingCompletion] = useState<PendingReadingCompletion | null>(
     () => loadPendingReadingCompletion(),
   )
-  const sessionRef = useRef(session)
-  sessionRef.current = session
-  const completingRef = useRef(false)
+  const sessionsRef = useRef(sessions)
+  sessionsRef.current = sessions
+  const completingIdsRef = useRef(new Set<string>())
+
+  const persist = useCallback((next: ActiveTimerSession[]) => {
+    const capped = next.slice(0, MAX_ACTIVE_TIMERS)
+    sessionsRef.current = capped
+    setSessions(capped)
+    if (capped.length) saveActiveTimers(capped)
+    else clearActiveTimers()
+  }, [])
+
+  const updateSessions = useCallback((updater: (current: ActiveTimerSession[]) => ActiveTimerSession[]) => {
+    persist(updater(sessionsRef.current))
+  }, [persist])
 
   const openModal = useCallback(() => setModalOpen(true), [])
   const closeModal = useCallback(() => setModalOpen(false), [])
   const clearNotice = useCallback(() => setNotice(null), [])
   const pushNotice = useCallback((next: TimerNotice) => setNotice(next), [])
 
-  const persist = useCallback((next: ActiveTimerSession | null) => {
-    sessionRef.current = next
-    setSession(next)
-    if (next) saveActiveTimer(next)
-    else clearActiveTimer()
-  }, [])
+  const recordCompletions = useCallback((entries: PendingComplete[], noticeMessage?: string) => {
+    if (!entries.length) return
+    const nextByDate = new Map<string, ReturnType<typeof getRecordByDate>>()
 
-  const recordMinutes = useCallback(
-    (
-      targets: TimerTarget[],
-      date: string,
-      minutes: number,
-      noticeMessage: string,
-    ) => {
-      const existing = getRecordByDate(date)
-      const next = appendTimerTargetsToRecord(existing, date, targets, minutes)
-      if (next) upsertRecord(next)
-      setNotice({ message: noticeMessage, type: 'success' })
-    },
-    [getRecordByDate, upsertRecord],
-  )
-
-  const completionNotice = useCallback((targets: TimerTarget[], minutes: number) => {
-    if (targets.length === 1) {
-      return `恭喜你完成「${targets[0].taskName}」🎉 已记录 ${minutes} 分钟`
+    for (const entry of entries) {
+      const targets = normalizeTimerTargets(
+        entry.targets?.length
+          ? entry.targets
+          : [{ taskName: entry.taskName, category: entry.category }],
+      )
+      if (!targets.length || entry.minutes <= 0) continue
+      const existing = nextByDate.has(entry.date)
+        ? nextByDate.get(entry.date)
+        : getRecordByDate(entry.date)
+      const next = appendTimerTargetsToRecord(existing, entry.date, targets, entry.minutes)
+      if (next) nextByDate.set(entry.date, next)
     }
-    return `已为 ${targets.length} 个任务各记录 ${minutes} 分钟，共 ${targets.length * minutes} 分钟`
-  }, [])
 
-  const voidExpired = useCallback(
-    (taskName?: string) => {
-      persist(null)
-      setModalOpen(false)
-      setNotice({
-        message: taskName
-          ? `「${taskName}」超过 5 小时，已停止且未保存`
-          : EXPIRED_NOTICE.message,
-        type: 'error',
-      })
-    },
-    [persist],
-  )
+    for (const record of nextByDate.values()) {
+      if (record) upsertRecord(record)
+    }
+    if (noticeMessage) setNotice({ message: noticeMessage, type: 'success' })
+  }, [getRecordByDate, upsertRecord])
 
-  // 刷新时若倒计时已结束，补记一次（sessionStorage 防 StrictMode 双记）
+  // 处理刷新时已完成的倒计时。sessionStorage 消费一次，避免 StrictMode 双记。
   useEffect(() => {
     let raw: string | null = null
     try {
@@ -205,34 +209,23 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     }
     if (!raw) return
     try {
-      const pending = JSON.parse(raw) as PendingComplete
-      if (!pending?.minutes) return
-      const targets = normalizeTimerTargets(
-        pending.targets?.length
-          ? pending.targets
-          : [{ taskName: pending.taskName, category: pending.category }],
-      )
-      if (targets.length === 0) return
-      recordMinutes(
-        targets,
-        pending.date,
-        pending.minutes,
-        completionNotice(targets, pending.minutes),
-      )
+      const parsed = JSON.parse(raw)
+      const entries = (Array.isArray(parsed) ? parsed : [parsed]) as PendingComplete[]
+      const valid = entries.filter((entry) => entry?.minutes > 0)
+      recordCompletions(valid, valid.length === 1
+        ? `「${valid[0].taskName}」倒计时完成，已记录 ${valid[0].minutes} 分钟`
+        : `${valid.length} 个倒计时已分别保存`)
     } catch {
-      // ignore
+      // Ignore corrupted legacy completion data.
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅启动时处理一次
-  }, [])
+  }, [recordCompletions])
 
-  // 运行中按墙钟刷新；弹层关闭时降频，减轻手机端列表滑动卡顿
+  // 任意计时器运行时共享一个墙钟 tick；只改变文本，不改变布局。
   useEffect(() => {
-    if (session?.status !== 'running') return
-
+    if (!sessions.some((timer) => timer.status === 'running')) return
     const tick = () => setNow(Date.now())
     tick()
-    const intervalMs = modalOpen ? 250 : 1000
-    const id = window.setInterval(tick, intervalMs)
+    const id = window.setInterval(tick, modalOpen ? 250 : 1000)
     const onVisible = () => {
       if (document.visibilityState === 'visible') tick()
     }
@@ -243,202 +236,166 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', tick)
     }
-  }, [session?.status, modalOpen])
+  }, [sessions, modalOpen])
 
-  const elapsedMs = session ? getElapsedMs(session, now) : 0
-  const displayMs = session ? getDisplayMs(session, now) : 0
-
-  // 正计时超过 5 小时自动作废
+  // 各计时器独立过期或完成，不影响同批其他任务。
   useEffect(() => {
-    if (!session || session.mode === 'countdown') return
-    if (elapsedMs < MAX_TIMER_MS) return
-    voidExpired(formatSessionTargetNames(session))
-  }, [session, elapsedMs, voidExpired])
+    const expired = sessions.filter((timer) => (
+      timer.mode !== 'countdown' && getElapsedMs(timer, now) >= MAX_TIMER_MS
+    ))
+    const completed = sessions.filter((timer) => (
+      timer.mode === 'countdown' && isCountdownFinished(timer, now)
+    ))
+    const actionable = [...expired, ...completed].filter((timer) => !completingIdsRef.current.has(timer.id))
+    if (!actionable.length) return
+    actionable.forEach((timer) => completingIdsRef.current.add(timer.id))
 
-  // 倒计时归零：自动记入
-  useEffect(() => {
-    if (!session || session.mode !== 'countdown') return
-    if (!isCountdownFinished(session, now)) return
-    if (completingRef.current) return
-    completingRef.current = true
+    const ids = new Set(actionable.map((timer) => timer.id))
+    persist(sessions.filter((timer) => !ids.has(timer.id)))
 
-    const ms = getElapsedMs(session, now)
-    const minutes = elapsedMsToMinutes(ms)
-    const targets = getSessionTargets(session)
-    const { date } = session
-    persist(null)
-    setModalOpen(false)
+    const completedEntries = completed
+      .filter((timer) => ids.has(timer.id))
+      .map((timer) => ({
+        id: timer.id,
+        taskName: timer.taskName,
+        category: timer.category,
+        targets: getSessionTargets(timer),
+        date: timer.date,
+        minutes: elapsedMsToMinutes(getElapsedMs(timer, now)),
+      }))
+      .filter((entry) => entry.minutes > 0)
+    recordCompletions(completedEntries, completedEntries.length === 1
+      ? `「${completedEntries[0].taskName}」倒计时完成，已记录 ${completedEntries[0].minutes} 分钟`
+      : completedEntries.length > 1 ? `${completedEntries.length} 个倒计时已分别保存` : undefined)
 
-    if (minutes <= 0) {
-      setNotice({ message: '少于 30 秒，未保存', type: 'error' })
-    } else {
-      recordMinutes(
-        targets,
-        date,
-        minutes,
-        completionNotice(targets, minutes),
-      )
-    }
-    completingRef.current = false
-  }, [session, now, persist, recordMinutes, completionNotice])
-
-  const start = useCallback(
-    (taskName: string, category: Category, options: StartTimerOptions = {}) => {
-      const targets = normalizeTimerTargets(
-        options.targets?.length
-          ? options.targets
-          : [{ taskName, category }],
-      )
-      if (targets.length === 0 || session || pendingReadingCompletion) return false
-      const primary = targets[0]
-
-      const mode: TimerMode = options.mode ?? 'stopwatch'
-      let durationMs: number | undefined
-
-      if (mode === 'countdown') {
-        const minutes = options.durationMinutes ?? 0
-        durationMs = Math.round(minutes * 60_000)
-        if (durationMs < MIN_COUNTDOWN_MS || durationMs > MAX_TIMER_MS) return false
-      }
-
-      persist({
-        taskName: primary.taskName,
-        category: primary.category,
-        targets,
-        date: options.date ?? today(),
-        status: 'running',
-        mode,
-        durationMs,
-        baseElapsedMs: 0,
-        segmentStartedAt: Date.now(),
-        completionKind: options.completionKind,
+    if (expired.length) {
+      setNotice({
+        message: `${expired.map((timer) => `「${timer.taskName}」`).join('、')}超过 5 小时，已停止且未保存`,
+        type: 'error',
       })
-      setNow(Date.now())
-      return true
-    },
-    [persist, session, pendingReadingCompletion],
-  )
+    }
+    actionable.forEach((timer) => completingIdsRef.current.delete(timer.id))
+  }, [sessions, now, persist, recordCompletions])
 
-  const pause = useCallback(() => {
-    setSession((prev) => {
-      if (!prev || prev.status !== 'running' || prev.segmentStartedAt == null) return prev
-      const next: ActiveTimerSession = {
-        ...prev,
+  const start = useCallback((taskName: string, category: Category, options: StartTimerOptions = {}) => {
+    if (pendingReadingCompletion) return false
+    const targets = normalizeTimerTargets(
+      options.targets?.length ? options.targets : [{ taskName, category }],
+    )
+    if (!targets.length || sessionsRef.current.length + targets.length > MAX_ACTIVE_TIMERS) return false
+
+    const activeKeys = new Set(sessionsRef.current.map((timer) => `${timer.category}\u0000${timer.taskName.trim()}`))
+    if (targets.some((target) => activeKeys.has(`${target.category}\u0000${target.taskName}`))) return false
+
+    const mode = options.mode ?? 'stopwatch'
+    let durationMs: number | undefined
+    if (mode === 'countdown') {
+      durationMs = Math.round((options.durationMinutes ?? 0) * 60_000)
+      if (durationMs < MIN_COUNTDOWN_MS || durationMs > MAX_TIMER_MS) return false
+    }
+
+    const startedAt = Date.now()
+    const created = targets.map((target) => ({
+      id: createTimerId(),
+      taskName: target.taskName,
+      category: target.category,
+      targets: [target],
+      date: options.date ?? today(),
+      status: 'running' as const,
+      mode,
+      durationMs,
+      baseElapsedMs: 0,
+      segmentStartedAt: startedAt,
+      completionKind: target.category === 'reading' ? options.completionKind : undefined,
+    }))
+    persist([...sessionsRef.current, ...created])
+    setNow(startedAt)
+    return true
+  }, [pendingReadingCompletion, persist])
+
+  const pause = useCallback((sessionId: string) => {
+    updateSessions((current) => current.map((timer) => {
+      if (timer.id !== sessionId || timer.status !== 'running' || timer.segmentStartedAt == null) return timer
+      return {
+        ...timer,
         status: 'paused',
-        baseElapsedMs: getElapsedMs(prev),
+        baseElapsedMs: getElapsedMs(timer),
         segmentStartedAt: null,
       }
-      if (isTimerExpired(next)) {
-        clearActiveTimer()
-        sessionRef.current = null
-        setModalOpen(false)
-        setNotice({
-          message: `「${formatSessionTargetNames(prev)}」超过 5 小时，已停止且未保存`,
-          type: 'error',
-        })
-        return null
-      }
-      saveActiveTimer(next)
-      return next
-    })
-  }, [])
+    }))
+  }, [updateSessions])
 
-  const resume = useCallback(() => {
-    setSession((prev) => {
-      if (!prev || prev.status !== 'paused') return prev
-      if (isTimerExpired(prev)) {
-        clearActiveTimer()
-        sessionRef.current = null
-        setModalOpen(false)
-        setNotice({
-          message: `「${formatSessionTargetNames(prev)}」超过 5 小时，已停止且未保存`,
-          type: 'error',
-        })
-        return null
-      }
-      if (isCountdownFinished(prev)) {
-        // 交给完成 effect；先恢复 running 以便 tick，或直接完成
-        clearActiveTimer()
-        sessionRef.current = null
-        const ms = getElapsedMs(prev)
-        const minutes = elapsedMsToMinutes(ms)
-        if (minutes > 0) {
-          const targets = getSessionTargets(prev)
-          const existing = getRecordByDate(prev.date)
-          const record = appendTimerTargetsToRecord(
-            existing,
-            prev.date,
-            targets,
-            minutes,
-          )
-          if (record) upsertRecord(record)
-          setNotice({
-            message: completionNotice(targets, minutes),
-            type: 'success',
-          })
-        } else {
-          setNotice({ message: '少于 30 秒，未保存', type: 'error' })
-        }
-        setModalOpen(false)
-        return null
-      }
-      const next: ActiveTimerSession = {
-        ...prev,
-        status: 'running',
-        segmentStartedAt: Date.now(),
-      }
-      saveActiveTimer(next)
-      setNow(Date.now())
-      return next
-    })
-  }, [getRecordByDate, upsertRecord, completionNotice])
+  const resume = useCallback((sessionId: string) => {
+    const current = sessionsRef.current.find((timer) => timer.id === sessionId)
+    if (!current || current.status !== 'paused') return
+    if (isTimerExpired(current)) {
+      persist(sessionsRef.current.filter((timer) => timer.id !== sessionId))
+      setNotice({ message: `「${current.taskName}」超过 5 小时，已停止且未保存`, type: 'error' })
+      return
+    }
+    updateSessions((timers) => timers.map((timer) => timer.id === sessionId
+      ? { ...timer, status: 'running', segmentStartedAt: Date.now() }
+      : timer))
+    setNow(Date.now())
+  }, [persist, updateSessions])
 
-  const discard = useCallback(() => {
-    persist(null)
+  const discard = useCallback((sessionId: string) => {
+    const current = sessionsRef.current.find((timer) => timer.id === sessionId)
+    if (!current) return
+    persist(sessionsRef.current.filter((timer) => timer.id !== sessionId))
+    setNotice({ message: `已删除「${current.taskName}」计时`, type: 'error' })
   }, [persist])
 
-  const stop = useCallback((): StopTimerResult => {
-    const current = sessionRef.current
+  const stop = useCallback((sessionId: string): StopTimerResult => {
+    const current = sessionsRef.current.find((timer) => timer.id === sessionId)
     if (!current) return { ok: false, reason: 'no_session' }
 
     const ms = getElapsedMs(current)
-    const { taskName, category, date } = current
-    const targets = getSessionTargets(current)
-
     if (current.mode !== 'countdown' && ms >= MAX_TIMER_MS) {
-      voidExpired(formatSessionTargetNames(current))
+      persist(sessionsRef.current.filter((timer) => timer.id !== sessionId))
+      setNotice({ message: `「${current.taskName}」超过 5 小时，已停止且未保存`, type: 'error' })
       return { ok: false, reason: 'expired' }
     }
 
     const minutes = elapsedMsToMinutes(ms)
-    persist(null)
-    setModalOpen(false)
+    const targets = getSessionTargets(current)
+    persist(sessionsRef.current.filter((timer) => timer.id !== sessionId))
 
     if (current.completionKind === 'reading') {
       const pending: PendingReadingCompletion = {
-        id: typeof crypto !== 'undefined' && 'randomUUID' in crypto
-          ? crypto.randomUUID()
-          : `reading-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        bookTitle: taskName.trim(),
-        date,
+        id: createTimerId(),
+        bookTitle: current.taskName.trim(),
+        date: current.date,
         minutes,
         completedAt: new Date().toISOString(),
       }
       savePendingReadingCompletion(pending)
       setPendingReadingCompletion(pending)
+      setModalOpen(false)
     } else if (minutes > 0) {
-      recordMinutes(
+      recordCompletions([{
+        id: current.id,
+        taskName: current.taskName,
+        category: current.category,
         targets,
-        date,
+        date: current.date,
         minutes,
-        completionNotice(targets, minutes),
-      )
+      }], `已结束「${current.taskName}」，记录 ${minutes} 分钟`)
     } else {
-      setNotice({ message: '少于 30 秒，未保存', type: 'error' })
+      setNotice({ message: `「${current.taskName}」少于 30 秒，未保存`, type: 'error' })
       return { ok: false, reason: 'too_short' }
     }
-    return { ok: true, minutes, taskName, category, targets, date }
-  }, [persist, recordMinutes, voidExpired, completionNotice])
+
+    return {
+      ok: true,
+      sessionId,
+      minutes,
+      taskName: current.taskName,
+      category: current.category,
+      targets,
+      date: current.date,
+    }
+  }, [persist, recordCompletions])
 
   const completeReading = useCallback((startPage: number, endPage: number): boolean => {
     const pending = pendingReadingCompletion
@@ -458,7 +415,6 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       completedAt: pending.completedAt,
     })
     if (!next) return false
-
     upsertRecord(next)
     clearPendingReadingCompletion()
     setPendingReadingCompletion(null)
@@ -475,52 +431,57 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     setNotice({ message: '本次阅读计时已删除', type: 'error' })
   }, [])
 
-  const value = useMemo(
-    () => ({
-      session,
-      elapsedMs,
-      displayMs,
-      modalOpen,
-      notice,
-      pendingReadingCompletion,
-      openModal,
-      closeModal,
-      clearNotice,
-      pushNotice,
-      start,
-      pause,
-      resume,
-      stop,
-      discard,
-      completeReading,
-      discardReadingCompletion,
-    }),
-    [
-      session,
-      elapsedMs,
-      displayMs,
-      modalOpen,
-      notice,
-      pendingReadingCompletion,
-      openModal,
-      closeModal,
-      clearNotice,
-      pushNotice,
-      start,
-      pause,
-      resume,
-      stop,
-      discard,
-      completeReading,
-      discardReadingCompletion,
-    ],
-  )
+  const session = sessions[0] ?? null
+  const elapsedMs = session ? getElapsedMs(session, now) : 0
+  const displayMs = session ? getDisplayMs(session, now) : 0
+
+  const value = useMemo(() => ({
+    sessions,
+    session,
+    now,
+    elapsedMs,
+    displayMs,
+    modalOpen,
+    notice,
+    pendingReadingCompletion,
+    openModal,
+    closeModal,
+    clearNotice,
+    pushNotice,
+    start,
+    pause,
+    resume,
+    stop,
+    discard,
+    completeReading,
+    discardReadingCompletion,
+  }), [
+    sessions,
+    session,
+    now,
+    elapsedMs,
+    displayMs,
+    modalOpen,
+    notice,
+    pendingReadingCompletion,
+    openModal,
+    closeModal,
+    clearNotice,
+    pushNotice,
+    start,
+    pause,
+    resume,
+    stop,
+    discard,
+    completeReading,
+    discardReadingCompletion,
+  ])
 
   return <TimerContext.Provider value={value}>{children}</TimerContext.Provider>
 }
 
 export function useTimer(): TimerContextValue {
-  const ctx = useContext(TimerContext)
-  if (!ctx) throw new Error('useTimer must be used within TimerProvider')
-  return ctx
+  const context = useContext(TimerContext)
+  if (!context) throw new Error('useTimer must be used within TimerProvider')
+  return context
 }
