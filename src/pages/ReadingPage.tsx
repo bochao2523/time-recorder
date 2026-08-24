@@ -1,24 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PageCard } from '../components/layout/Layout'
+import { ReadingInsights } from '../components/reading/ReadingInsights'
 import { useRecords } from '../context/RecordsContext'
 import { useTimer } from '../context/TimerContext'
-import { formatDisplayDate, formatMinutes, today } from '../lib/dateUtils'
-import { countReadingPages, totalReadingPages } from '../lib/readingLogs'
+import { formatMinutes, today } from '../lib/dateUtils'
+import { totalReadingPages } from '../lib/readingLogs'
+import { buildReadingBookInsights, collectReadingSessions, recentReadingBooks } from '../lib/readingInsights'
 import { formatElapsed, getDisplayMs, MAX_ACTIVE_TIMERS } from '../lib/timerStorage'
 
-type ReadingSessionRow = {
-  id: string
-  bookTitle: string
-  date: string
-  startPage: number | null
-  endPage: number | null
-  minutes: number
-  completedAt: string
-  legacy: boolean
-}
-
 export function ReadingPage() {
-  const { records, getRecordByDate } = useRecords()
+  const { records, readingBooks, getRecordByDate, setReadingBookTotalPages } = useRecords()
   const {
     sessions,
     now,
@@ -31,32 +22,39 @@ export function ReadingPage() {
     pushNotice,
   } = useTimer()
   const [bookTitle, setBookTitle] = useState('')
+  const [selectedAnalysisBook, setSelectedAnalysisBook] = useState('')
 
-  const readingSessions = useMemo<ReadingSessionRow[]>(() => records
-    .flatMap((record) => (record.readingLogs ?? []).map((entry) => ({
-      id: entry.id,
-      bookTitle: entry.bookTitle,
-      date: record.date,
-      startPage: entry.startPage,
-      endPage: entry.endPage,
-      minutes: entry.minutes ?? 0,
-      completedAt: entry.completedAt ?? `${record.date}T00:00:00`,
-      legacy: entry.minutes == null,
-    })))
-    .sort((a, b) => b.completedAt.localeCompare(a.completedAt)), [records])
-
-  const recentBooks = useMemo(() => {
+  const readingSessions = useMemo(() => collectReadingSessions(records), [records])
+  const recentBooks = useMemo(() => recentReadingBooks(readingSessions, 5), [readingSessions])
+  const analysisBookTitles = useMemo(() => {
+    const candidates = [
+      ...recentReadingBooks(readingSessions, 50),
+      ...sessions.filter((timer) => timer.completionKind === 'reading').map((timer) => timer.taskName),
+      ...(pendingReadingCompletion ? [pendingReadingCompletion.bookTitle] : []),
+      ...readingBooks.map((book) => book.title),
+    ]
     const seen = new Set<string>()
-    const result: string[] = []
-    for (const row of readingSessions) {
-      const title = row.bookTitle.trim()
-      if (!title || seen.has(title)) continue
-      seen.add(title)
-      result.push(title)
-      if (result.length >= 5) break
-    }
-    return result
-  }, [readingSessions])
+    return candidates.filter((title) => {
+      const key = title.trim().toLocaleLowerCase()
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }, [pendingReadingCompletion, readingBooks, readingSessions, sessions])
+
+  useEffect(() => {
+    if (selectedAnalysisBook && analysisBookTitles.includes(selectedAnalysisBook)) return
+    setSelectedAnalysisBook(analysisBookTitles[0] ?? '')
+  }, [analysisBookTitles, selectedAnalysisBook])
+
+  const selectedBookMeta = readingBooks.find((book) => (
+    book.title.toLocaleLowerCase() === selectedAnalysisBook.toLocaleLowerCase()
+  ))
+  const selectedInsights = useMemo(() => (
+    selectedAnalysisBook
+      ? buildReadingBookInsights(readingSessions, selectedAnalysisBook, selectedBookMeta?.totalPages)
+      : null
+  ), [readingSessions, selectedAnalysisBook, selectedBookMeta?.totalPages])
 
   const todayRecord = getRecordByDate(today())
   const todayLogs = todayRecord?.readingLogs ?? []
@@ -89,6 +87,7 @@ export function ReadingPage() {
       return
     }
     pushNotice({ message: `已开始「${title}」独立阅读计时`, type: 'success' })
+    setSelectedAnalysisBook(title)
     setBookTitle('')
   }
 
@@ -158,7 +157,10 @@ export function ReadingPage() {
                     <button
                       key={title}
                       type="button"
-                      onClick={() => setBookTitle(title)}
+                      onClick={() => {
+                        setBookTitle(title)
+                        setSelectedAnalysisBook(title)
+                      }}
                       className={`min-h-11 max-w-[13rem] shrink-0 truncate rounded-[10px] border px-3 text-sm font-bold ${selected ? 'border-chrome-yellow bg-chrome-yellow text-terracotta' : 'border-chrome-yellow/45 text-chrome-yellow active:bg-white/10'}`}
                     >
                       {title}
@@ -221,52 +223,17 @@ export function ReadingPage() {
         </div>
       </section>
 
-      <section aria-labelledby="reading-history-title">
-        <div className="flex items-end justify-between gap-3 px-1 pb-2 pt-1">
-          <h2 id="reading-history-title" className="text-base font-extrabold text-terracotta">最近阅读</h2>
-          <p className="text-xs text-stone-light">页码与计时记录</p>
-        </div>
-
-        {readingSessions.length === 0 ? (
-          <PageCard className="p-5 text-center">
-            <p className="text-sm font-extrabold text-terracotta">还没有阅读记录</p>
-            <p className="mt-1 text-xs leading-5 text-stone-light">选择一本书开始计时，结束时填写页码，第一条记录就会出现在这里。</p>
-          </PageCard>
-        ) : (
-          <ol className="space-y-2">
-            {readingSessions.slice(0, 12).map((row) => {
-              const pages = countReadingPages({
-                id: row.id,
-                bookTitle: row.bookTitle,
-                startPage: row.startPage,
-                endPage: row.endPage,
-              })
-              return (
-                <li key={`${row.date}-${row.id}`} className="calico-surface stitched-light rounded-[14px] p-3.5">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-steel text-calico" aria-hidden>
-                      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" /></svg>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-extrabold text-terracotta">{row.bookTitle}</p>
-                      <p className="mt-0.5 text-xs text-stone-light">
-                        {row.startPage != null && row.endPage != null
-                          ? `第 ${row.startPage}–${row.endPage} 页`
-                          : '旧记录 · 未填写完整页码'}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="depot-display text-xl font-extrabold tabular-nums text-terracotta">{pages}<span className="ml-0.5 text-xs">页</span></p>
-                      <p className="text-[11px] text-stone-light">{row.minutes > 0 ? `${row.minutes} 分钟` : row.legacy ? '旧记录' : '不足 1 分钟'}</p>
-                    </div>
-                  </div>
-                  <p className="mt-2 border-t border-dashed border-terracotta/18 pt-2 text-[11px] text-stone-light">{formatDisplayDate(row.date)}</p>
-                </li>
-              )
-            })}
-          </ol>
-        )}
-      </section>
+      <ReadingInsights
+        bookTitles={analysisBookTitles}
+        selectedTitle={selectedAnalysisBook}
+        onSelectTitle={setSelectedAnalysisBook}
+        insights={selectedInsights}
+        totalPages={selectedBookMeta?.totalPages}
+        onSaveTotalPages={(totalPages) => {
+          setReadingBookTotalPages(selectedAnalysisBook, totalPages)
+          pushNotice({ message: `已保存「${selectedAnalysisBook}」总页数`, type: 'success' })
+        }}
+      />
     </div>
   )
 }

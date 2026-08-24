@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { DailyRecord, ImportMode } from '../types'
+import type { DailyRecord, ImportMode, ReadingBookMeta } from '../types'
 import { useCategories } from './useCategories'
 import {
   deleteRecord as deleteRecordStorage,
@@ -14,19 +14,25 @@ import {
   getRecordByDate,
   importRecords as importRecordsStorage,
   loadRecords,
+  loadReadingBooks,
+  mergeReadingBooks,
   parseImportJson,
   saveRecords,
+  saveReadingBooks,
+  upsertReadingBook,
   upsertRecord as upsertRecordStorage,
 } from '../lib/storage'
 
 interface RecordsContextValue {
   records: DailyRecord[]
+  readingBooks: ReadingBookMeta[]
   upsertRecord: (record: DailyRecord) => void
   deleteRecord: (date: string) => void
   getRecordByDate: (date: string) => DailyRecord | undefined
   refresh: () => void
   exportRecords: () => void
   importRecords: (json: string, mode: ImportMode) => void
+  setReadingBookTotalPages: (title: string, totalPages: number) => void
 }
 
 const RecordsContext = createContext<RecordsContextValue | null>(null)
@@ -34,6 +40,7 @@ const RecordsContext = createContext<RecordsContextValue | null>(null)
 export function RecordsProvider({ children }: { children: ReactNode }) {
   const { categories, importCategoryDefinitions } = useCategories()
   const [records, setRecords] = useState<DailyRecord[]>(() => loadRecords())
+  const [readingBooks, setReadingBooks] = useState<ReadingBookMeta[]>(() => loadReadingBooks())
 
   const upsertRecord = useCallback((record: DailyRecord) => {
     setRecords((prev) => {
@@ -58,18 +65,37 @@ export function RecordsProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(() => {
     setRecords(loadRecords())
+    setReadingBooks(loadReadingBooks())
+  }, [])
+
+  const setReadingBookTotalPages = useCallback((title: string, totalPages: number) => {
+    if (!title.trim() || !Number.isInteger(totalPages) || totalPages < 1) return
+    setReadingBooks((previous) => {
+      const next = upsertReadingBook(previous, title, totalPages)
+      saveReadingBooks(next)
+      return next
+    })
   }, [])
 
   const exportRecords = useCallback(() => {
     setRecords((prev) => {
-      downloadRecords(prev, categories)
+      downloadRecords(prev, categories, readingBooks)
       return prev
     })
-  }, [categories])
+  }, [categories, readingBooks])
 
   const importRecords = useCallback((json: string, mode: ImportMode) => {
     const imported = parseImportJson(json)
     if (imported.categories?.length) importCategoryDefinitions(imported.categories)
+    if (imported.readingBooks) {
+      setReadingBooks((previous) => {
+        const next = mode === 'replace'
+          ? imported.readingBooks ?? []
+          : mergeReadingBooks(previous, imported.readingBooks ?? [])
+        saveReadingBooks(next)
+        return next
+      })
+    }
     setRecords((prev) => {
       const next = importRecordsStorage(prev, imported.records, mode)
       saveRecords(next)
@@ -80,14 +106,16 @@ export function RecordsProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       records,
+      readingBooks,
       upsertRecord,
       deleteRecord,
       getRecordByDate: getRecord,
       refresh,
       exportRecords,
       importRecords,
+      setReadingBookTotalPages,
     }),
-    [records, upsertRecord, deleteRecord, getRecord, refresh, exportRecords, importRecords],
+    [records, readingBooks, upsertRecord, deleteRecord, getRecord, refresh, exportRecords, importRecords, setReadingBookTotalPages],
   )
 
   return <RecordsContext.Provider value={value}>{children}</RecordsContext.Provider>

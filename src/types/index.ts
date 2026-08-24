@@ -49,6 +49,13 @@ export interface ReadingLogEntry {
   completedAt?: string
 }
 
+/** 跨日期保存的书籍资料，用于阅读进度与完读预估。 */
+export interface ReadingBookMeta {
+  title: string
+  totalPages: number
+  updatedAt: string
+}
+
 export interface DailyRecord {
   /** YYYY-MM-DD，每天唯一一条 */
   date: string

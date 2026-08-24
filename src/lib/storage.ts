@@ -1,8 +1,9 @@
-import type { Category, CategoryDefinition, CategorySubItem, CategorySubItems, DailyRecord, ImportMode, ReadingLogEntry } from '../types'
+import type { Category, CategoryDefinition, CategorySubItem, CategorySubItems, DailyRecord, ImportMode, ReadingBookMeta, ReadingLogEntry } from '../types'
 import { minutesFromSubItems, subItemsFromRecord } from './categoryItems'
 import { normalizeReadingLogs } from './readingLogs'
 
 const STORAGE_KEY = 'time-tracker:records'
+const READING_BOOKS_STORAGE_KEY = 'time-tracker:reading-books'
 
 /** 预留：未来可切换为云端 StorageAdapter */
 export interface StorageAdapter {
@@ -137,6 +138,64 @@ export function saveRecords(records: DailyRecord[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
 }
 
+function validateReadingBookMeta(raw: unknown): raw is ReadingBookMeta {
+  if (!raw || typeof raw !== 'object') return false
+  const value = raw as Record<string, unknown>
+  return (
+    typeof value.title === 'string' && value.title.trim().length > 0 &&
+    typeof value.totalPages === 'number' && Number.isInteger(value.totalPages) && value.totalPages >= 1 &&
+    typeof value.updatedAt === 'string'
+  )
+}
+
+export function loadReadingBooks(): ReadingBookMeta[] {
+  try {
+    const raw = localStorage.getItem(READING_BOOKS_STORAGE_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(validateReadingBookMeta).map((book) => ({ ...book, title: book.title.trim() }))
+  } catch {
+    return []
+  }
+}
+
+export function saveReadingBooks(books: readonly ReadingBookMeta[]): void {
+  localStorage.setItem(READING_BOOKS_STORAGE_KEY, JSON.stringify(books))
+}
+
+export function upsertReadingBook(
+  books: readonly ReadingBookMeta[],
+  title: string,
+  totalPages: number,
+): ReadingBookMeta[] {
+  const normalizedTitle = title.trim()
+  const key = normalizedTitle.toLocaleLowerCase()
+  const next: ReadingBookMeta = {
+    title: normalizedTitle,
+    totalPages,
+    updatedAt: new Date().toISOString(),
+  }
+  const index = books.findIndex((book) => book.title.toLocaleLowerCase() === key)
+  if (index < 0) return [...books, next]
+  const result = [...books]
+  result[index] = next
+  return result
+}
+
+export function mergeReadingBooks(
+  existing: readonly ReadingBookMeta[],
+  imported: readonly ReadingBookMeta[],
+): ReadingBookMeta[] {
+  const byTitle = new Map(existing.map((book) => [book.title.toLocaleLowerCase(), book]))
+  for (const book of imported) {
+    const key = book.title.toLocaleLowerCase()
+    const current = byTitle.get(key)
+    if (!current || book.updatedAt >= current.updatedAt) byTitle.set(key, book)
+  }
+  return Array.from(byTitle.values())
+}
+
 /** 按 date 覆盖或追加 */
 export function upsertRecord(records: DailyRecord[], record: DailyRecord): DailyRecord[] {
   const normalized = normalizeRecord(record)
@@ -163,12 +222,14 @@ export function getRecordByDate(records: DailyRecord[], date: string): DailyReco
 export interface ParsedImport {
   records: DailyRecord[]
   categories?: CategoryDefinition[]
+  readingBooks?: ReadingBookMeta[]
 }
 
 export function parseImportJson(json: string): ParsedImport {
   const parsed: unknown = JSON.parse(json)
   let arr: unknown[]
   let categories: CategoryDefinition[] | undefined
+  let readingBooks: ReadingBookMeta[] | undefined
   if (Array.isArray(parsed)) {
     arr = parsed
   } else if (
@@ -180,12 +241,14 @@ export function parseImportJson(json: string): ParsedImport {
     arr = (parsed as { records: unknown[] }).records
     const rawCategories = (parsed as { categories?: unknown }).categories
     if (Array.isArray(rawCategories)) categories = rawCategories as CategoryDefinition[]
+    const rawReadingBooks = (parsed as { readingBooks?: unknown }).readingBooks
+    if (Array.isArray(rawReadingBooks)) readingBooks = rawReadingBooks.filter(validateReadingBookMeta)
   } else {
     throw new Error('这个文件不是有效的备份')
   }
   const valid = arr.filter(validateRecord).map(normalizeRecord)
   if (valid.length === 0) throw new Error('备份中没有可导入的记录')
-  return { records: valid, categories }
+  return { records: valid, categories, readingBooks }
 }
 
 /** 合并或替换导入数据 */
@@ -204,11 +267,16 @@ export function importRecords(
 }
 
 /** 触发 JSON 文件下载 */
-export function downloadRecords(records: DailyRecord[], categories?: CategoryDefinition[]): void {
+export function downloadRecords(
+  records: DailyRecord[],
+  categories?: CategoryDefinition[],
+  readingBooks?: ReadingBookMeta[],
+): void {
   const payload = {
-    version: 3,
+    version: 4,
     exportedAt: new Date().toISOString(),
     categories,
+    readingBooks,
     records,
   }
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
