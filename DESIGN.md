@@ -11,14 +11,14 @@ colors:
   depot-ink: "#171a18"
   stone-light: "#5f5a4c"
   stitch: "#b69a4a"
-  category-study: "#00533f"
-  category-meditation: "#a93c63"
-  category-exercise: "#965f00"
-  category-reading: "#215dca"
-  category-gaming: "#a4470c"
-  category-custom-purple: "#7a3fa0"
-  category-custom-cyan: "#006b78"
-  category-custom-red: "#b4434b"
+  category-study: "#00a878"
+  category-meditation: "#e83e72"
+  category-exercise: "#efa400"
+  category-reading: "#276ef1"
+  category-gaming: "#f46d16"
+  category-custom-purple: "#9c4dcc"
+  category-custom-cyan: "#00a2b4"
+  category-custom-red: "#e0434f"
 typography:
   display:
     fontFamily: '"Barlow Condensed", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
@@ -138,7 +138,7 @@ components:
 
 ## Colors
 
-配色像一块经久使用的车厂控制牌：深绿负责承重，铬黄负责信号，暖棉布负责长时间阅读；高区分度类别色只用于数据分组，不改变产品的品牌底色。
+配色像一块经久使用的车厂控制牌：深绿负责承重，铬黄负责信号，暖棉布负责长时间阅读；明亮高饱和的类别色只用于数据分组，不改变产品的品牌底色。类别色作为图表填充与识别底色，正文始终使用稳定的深色文字。
 
 ### Primary
 
@@ -148,7 +148,7 @@ components:
 
 ### Secondary
 
-- **学习深松绿** (`colors.category-study`): 保留品牌亲缘，但只代表学习数据。
+- **学习亮翡翠** (`colors.category-study`): 保留品牌亲缘，但用更高明度和饱和度代表学习数据。
 - **阅读钴蓝** (`colors.category-reading`): 与学习、看剧彻底拉开色相，用于阅读数据。
 - **运动金橙** (`colors.category-exercise`): 表示运动数据，不承担保存或警告状态。
 - **冥想玫红** (`colors.category-meditation`): 表示冥想数据，避免继续堆叠绿色。

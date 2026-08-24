@@ -97,7 +97,7 @@ export function DashboardPage() {
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: category.color }} />
                 {category.label}
               </span>
-              <span className="shrink-0 text-sm font-semibold tabular-nums" style={{ color: category.color }}>
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-stone-800">
                 {formatMinutes(byCategory[category.id] ?? 0)}
               </span>
             </div>

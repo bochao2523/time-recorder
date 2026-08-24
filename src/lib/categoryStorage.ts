@@ -6,20 +6,35 @@ import {
 
 export const CATEGORY_STORAGE_KEY = 'time-tracker:categories'
 
-const CUSTOM_COLORS = ['#7A3FA0', '#006B78', '#B4434B', '#4E7118', '#A4470C', '#215DCA', '#A93C63', '#5D54B8']
+const CUSTOM_COLORS = ['#9C4DCC', '#00A2B4', '#E0434F', '#76B82A', '#F46D16', '#276EF1', '#E83E72', '#6057D9']
 
 /** 将旧版自动分配的低对比色迁移到高区分度色板；其他导入色保持不变。 */
 const LEGACY_AUTO_COLOR_MIGRATIONS: Readonly<Record<string, string>> = {
-  '#0E3A2E': '#00533F',
-  '#2F6B4F': '#A93C63',
-  '#B18F18': '#965F00',
-  '#496859': '#215DCA',
-  '#765F22': '#A4470C',
-  '#6C4D7D': '#7A3FA0',
-  '#3B6B77': '#006B78',
-  '#8A4B4B': '#B4434B',
-  '#596C35': '#4E7118',
-  '#8B6236': '#A4470C',
+  '#0E3A2E': '#00A878',
+  '#00533F': '#00A878',
+  '#2F6B4F': '#E83E72',
+  '#A93C63': '#E83E72',
+  '#C25474': '#E83E72',
+  '#B18F18': '#EFA400',
+  '#965F00': '#EFA400',
+  '#B77900': '#EFA400',
+  '#496859': '#276EF1',
+  '#215DCA': '#276EF1',
+  '#765F22': '#F46D16',
+  '#A4470C': '#F46D16',
+  '#C4601A': '#F46D16',
+  '#6C4D7D': '#9C4DCC',
+  '#7A3FA0': '#9C4DCC',
+  '#3B6B77': '#00A2B4',
+  '#006B78': '#00A2B4',
+  '#007E8F': '#00A2B4',
+  '#8A4B4B': '#E0434F',
+  '#B4434B': '#E0434F',
+  '#596C35': '#76B82A',
+  '#4E7118': '#76B82A',
+  '#5B7F1E': '#76B82A',
+  '#8B6236': '#F46D16',
+  '#5D54B8': '#6057D9',
 }
 
 function cloneDefaults(): CategoryDefinition[] {

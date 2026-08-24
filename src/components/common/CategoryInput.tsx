@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Category, CategoryDefinition, CategorySubItem } from '../../types'
 import { sumSubItemMinutes } from '../../lib/categoryItems'
+import { categoryForeground } from '../../theme/colors'
 
 interface CategoryInputProps {
   definition: CategoryDefinition
@@ -197,7 +198,10 @@ export function CategoryInput({
           className="flex min-h-[4.5rem] min-w-0 flex-1 items-center justify-between gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-chrome-yellow"
         >
           <span className="flex min-w-0 items-center gap-2">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-calico shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]" style={{ backgroundColor: color }}>
+            <span
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]"
+              style={{ backgroundColor: color, color: categoryForeground(color) }}
+            >
               <CategoryIcon category={category} label={label} />
             </span>
             <span className="min-w-0">

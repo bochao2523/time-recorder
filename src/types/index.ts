@@ -9,11 +9,11 @@ export interface CategoryDefinition {
 }
 
 export const DEFAULT_CATEGORY_DEFINITIONS: readonly CategoryDefinition[] = [
-  { id: 'study', label: '学习', color: '#00533F', active: true, builtin: true },
-  { id: 'meditation', label: '冥想', color: '#A93C63', active: true, builtin: true },
-  { id: 'exercise', label: '运动', color: '#965F00', active: true, builtin: true },
-  { id: 'reading', label: '阅读', color: '#215DCA', active: true, builtin: true },
-  { id: 'gaming', label: '游戏', color: '#A4470C', active: true, builtin: true },
+  { id: 'study', label: '学习', color: '#00A878', active: true, builtin: true },
+  { id: 'meditation', label: '冥想', color: '#E83E72', active: true, builtin: true },
+  { id: 'exercise', label: '运动', color: '#EFA400', active: true, builtin: true },
+  { id: 'reading', label: '阅读', color: '#276EF1', active: true, builtin: true },
+  { id: 'gaming', label: '游戏', color: '#F46D16', active: true, builtin: true },
 ]
 
 /** 旧版默认大类；保留用于读取没有自定义配置的历史数据。 */
