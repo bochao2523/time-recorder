@@ -6,7 +6,21 @@ import {
 
 export const CATEGORY_STORAGE_KEY = 'time-tracker:categories'
 
-const CUSTOM_COLORS = ['#6C4D7D', '#3B6B77', '#8A4B4B', '#596C35', '#8B6236', '#496859']
+const CUSTOM_COLORS = ['#7A3FA0', '#006B78', '#B4434B', '#4E7118', '#A4470C', '#215DCA', '#A93C63', '#5D54B8']
+
+/** 将旧版自动分配的低对比色迁移到高区分度色板；其他导入色保持不变。 */
+const LEGACY_AUTO_COLOR_MIGRATIONS: Readonly<Record<string, string>> = {
+  '#0E3A2E': '#00533F',
+  '#2F6B4F': '#A93C63',
+  '#B18F18': '#965F00',
+  '#496859': '#215DCA',
+  '#765F22': '#A4470C',
+  '#6C4D7D': '#7A3FA0',
+  '#3B6B77': '#006B78',
+  '#8A4B4B': '#B4434B',
+  '#596C35': '#4E7118',
+  '#8B6236': '#A4470C',
+}
 
 function cloneDefaults(): CategoryDefinition[] {
   return DEFAULT_CATEGORY_DEFINITIONS.map((category) => ({ ...category }))
@@ -30,10 +44,11 @@ function isCategoryDefinition(value: unknown): value is CategoryDefinition {
 function normalizeDefinitions(raw: CategoryDefinition[]): CategoryDefinition[] {
   const byId = new Map<Category, CategoryDefinition>()
   for (const category of raw) {
+    const normalizedColor = category.color.toUpperCase()
     byId.set(category.id, {
       ...category,
       label: category.label.trim().slice(0, 12),
-      color: category.color.toUpperCase(),
+      color: LEGACY_AUTO_COLOR_MIGRATIONS[normalizedColor] ?? normalizedColor,
     })
   }
   for (const fallback of DEFAULT_CATEGORY_DEFINITIONS) {

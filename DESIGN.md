@@ -11,11 +11,14 @@ colors:
   depot-ink: "#171a18"
   stone-light: "#5f5a4c"
   stitch: "#b69a4a"
-  sage: "#2f6b4f"
-  teal: "#1d5747"
-  amber: "#b18f18"
-  steel: "#496859"
-  category-gaming: "#765f22"
+  category-study: "#00533f"
+  category-meditation: "#a93c63"
+  category-exercise: "#965f00"
+  category-reading: "#215dca"
+  category-gaming: "#a4470c"
+  category-custom-purple: "#7a3fa0"
+  category-custom-cyan: "#006b78"
+  category-custom-red: "#b4434b"
 typography:
   display:
     fontFamily: '"Barlow Condensed", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
@@ -135,7 +138,7 @@ components:
 
 ## Colors
 
-配色像一块经久使用的车厂控制牌：深绿负责承重，铬黄负责信号，暖棉布负责长时间阅读，低饱和类别色只在数据分组中出现。
+配色像一块经久使用的车厂控制牌：深绿负责承重，铬黄负责信号，暖棉布负责长时间阅读；高区分度类别色只用于数据分组，不改变产品的品牌底色。
 
 ### Primary
 
@@ -145,11 +148,12 @@ components:
 
 ### Secondary
 
-- **鼠尾草绿** (`colors.sage`): 表示冥想分类与正向继续状态。
-- **车库青绿** (`colors.teal`): 表示阅读之外的绿色数据层级与图表变化。
-- **旧铜琥珀** (`colors.amber`): 表示运动分类与保存中的小状态点。
-- **灰钢绿** (`colors.steel`): 表示阅读分类与次级图表系列。
-- **游戏黄褐** (`colors.category-gaming`): 只用于游戏分类的识别，不与主铬黄竞争。
+- **学习深松绿** (`colors.category-study`): 保留品牌亲缘，但只代表学习数据。
+- **阅读钴蓝** (`colors.category-reading`): 与学习、看剧彻底拉开色相，用于阅读数据。
+- **运动金橙** (`colors.category-exercise`): 表示运动数据，不承担保存或警告状态。
+- **冥想玫红** (`colors.category-meditation`): 表示冥想数据，避免继续堆叠绿色。
+- **游戏橙色** (`colors.category-gaming`): 只用于游戏分类的识别，不与主铬黄竞争。
+- **自定义紫、青、砖红** (`colors.category-custom-*`): 依次分配给自定义大类，让弹琴、看剧、码字等常见组合保持明显区分。
 
 ### Tertiary
 
