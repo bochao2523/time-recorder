@@ -129,7 +129,7 @@ export function DashboardPage() {
               title={`${category.label} · 项目排行`}
               isEmpty={subItemsByCategory[category.id].length === 0}
               emptyMessage="还没有项目记录"
-              height={Math.max(180, subItemsByCategory[category.id].length * 36 + 48)}
+              height={260}
             >
               <SubCategoryBarChart category={category} data={subItemsByCategory[category.id]} />
             </ChartContainer>
