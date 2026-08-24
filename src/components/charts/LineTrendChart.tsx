@@ -74,7 +74,7 @@ export function LineTrendChart({ records, range, categories }: LineTrendChartPro
       stack: 'daily-total',
       barMaxWidth: 30,
       emphasis: { focus: 'series' },
-      itemStyle: { borderRadius: [3, 3, 0, 0] },
+      itemStyle: { borderRadius: [3, 3, 0, 0], borderColor: '#FFFFFF', borderWidth: 1 },
       data: series[category.id],
     })),
   }
