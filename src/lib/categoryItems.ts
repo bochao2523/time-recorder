@@ -14,6 +14,37 @@ export function sumSubItemMinutes(items: CategorySubItem[] | undefined): number 
   return items.reduce((sum, item) => sum + (item.minutes > 0 ? item.minutes : 0), 0)
 }
 
+/** 按最近使用日期提取某个大类的历史任务名；同名任务只保留一次。 */
+export function recentTaskNames(
+  records: readonly DailyRecord[],
+  category: Category,
+  excludeDate?: string,
+  limit = 8,
+): string[] {
+  const result: string[] = []
+  const seen = new Set<string>()
+  const ordered = [...records].sort((a, b) => b.date.localeCompare(a.date))
+
+  for (const record of ordered) {
+    if (record.date === excludeDate) continue
+    const names = record.subItems?.[category]?.map((item) => item.name) ?? []
+    if (category === 'reading') {
+      names.push(...(record.readingLogs ?? []).map((entry) => entry.bookTitle))
+    }
+
+    for (const rawName of names) {
+      const name = rawName.trim()
+      const key = name.toLocaleLowerCase()
+      if (!name || seen.has(key)) continue
+      seen.add(key)
+      result.push(name)
+      if (result.length >= limit) return result
+    }
+  }
+
+  return result
+}
+
 export function minutesFromSubItems(subItems: CategorySubItems): Record<Category, number> {
   const minutes: Record<Category, number> = {}
   for (const [cat, items] of Object.entries(subItems)) {

@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Category, CategoryDefinition, CategorySubItem } from '../../types'
 import { sumSubItemMinutes } from '../../lib/categoryItems'
 
 interface CategoryInputProps {
   definition: CategoryDefinition
   items: CategorySubItem[]
+  /** 过去日期中使用过的任务名，按最近使用排序。 */
+  rememberedTaskNames?: string[]
   onChange: (items: CategorySubItem[]) => void
   /** 快捷继续计时（有任务名的行显示） */
   onQuickTimer?: (item: CategorySubItem) => void
@@ -96,6 +98,7 @@ function CategoryIcon({ category, label }: { category: Category; label: string }
 export function CategoryInput({
   definition,
   items,
+  rememberedTaskNames = [],
   onChange,
   onQuickTimer,
   activeTaskNames = [],
@@ -108,6 +111,7 @@ export function CategoryInput({
   const [isExpanded, setIsExpanded] = useState(false)
   /** 分钟输入草稿：删光时显示空，失焦后再提交 0，避免改数时整行被自动清掉 */
   const [minutesDraft, setMinutesDraft] = useState<Record<number, string>>({})
+  const minuteInputRefs = useRef(new Map<number, HTMLInputElement>())
 
   useEffect(() => {
     setMinutesDraft({})
@@ -161,6 +165,24 @@ export function CategoryInput({
   const handleAdd = () => {
     const base = items.length > 0 ? items : []
     updateItems([...base, createEmptyItem()])
+  }
+
+  const handleRecallTask = (name: string) => {
+    const existingIndex = items.findIndex((item) => (
+      item.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase()
+    ))
+    if (existingIndex >= 0) {
+      minuteInputRefs.current.get(existingIndex)?.focus()
+      return
+    }
+
+    const emptyIndex = items.findIndex((item) => !item.name.trim() && item.minutes === 0)
+    const targetIndex = emptyIndex >= 0 ? emptyIndex : items.length
+    const next = emptyIndex >= 0
+      ? items.map((item, index) => index === emptyIndex ? { ...item, name } : item)
+      : [...items, { name, minutes: 0 }]
+    updateItems(next)
+    window.requestAnimationFrame(() => minuteInputRefs.current.get(targetIndex)?.focus())
   }
 
   return (
@@ -223,6 +245,26 @@ export function CategoryInput({
       </div>
 
       {isExpanded && <div className="border-t border-dashed border-terracotta/30 pb-3.5 pt-3.5">
+      {rememberedTaskNames.length > 0 && (
+        <div className="mb-3" aria-label={`${label}历史任务`}>
+          <div className="flex items-baseline justify-between gap-3 px-0.5">
+            <p className="text-xs font-extrabold text-terracotta">以前用过</p>
+            <p className="text-xs text-stone-light">点一下填入</p>
+          </div>
+          <div className="mt-2 flex max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {rememberedTaskNames.map((name) => (
+              <button
+                key={name.toLocaleLowerCase()}
+                type="button"
+                onClick={() => handleRecallTask(name)}
+                className="min-h-11 max-w-[12rem] shrink-0 truncate rounded-[10px] border border-terracotta/25 bg-calico px-3 text-sm font-bold text-terracotta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chrome-yellow active:bg-cream-dark"
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="space-y-2.5">
         {rows.map((item, index) => {
           const minutesValue =
@@ -252,6 +294,10 @@ export function CategoryInput({
               />
               <div className="relative min-w-0">
                 <input
+                  ref={(element) => {
+                    if (element) minuteInputRefs.current.set(index, element)
+                    else minuteInputRefs.current.delete(index)
+                  }}
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"

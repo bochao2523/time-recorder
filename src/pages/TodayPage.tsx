@@ -14,6 +14,7 @@ import {
   buildRecordFromForm,
   createEmptySubItems,
   isSameFormAsRecord,
+  recentTaskNames,
   subItemsFromRecord,
   sumSubItemMinutes,
 } from '../lib/categoryItems'
@@ -126,6 +127,12 @@ export function TodayPage() {
     () => sessions.flatMap((timer) => getSessionTargets(timer)),
     [sessions],
   )
+  const rememberedTasksByCategory = useMemo<Partial<Record<Category, string[]>>>(() => (
+    Object.fromEntries(activeCategories.map((definition) => [
+      definition.id,
+      recentTaskNames(records, definition.id, selectedDate),
+    ]))
+  ), [activeCategories, records, selectedDate])
   const primaryTimer = sessions[0] ?? null
 
   const handleSubItemsChange = useCallback((cat: Category, items: CategorySubItems[Category]) => {
@@ -359,6 +366,7 @@ export function TodayPage() {
             key={definition.id}
             definition={definition}
             items={subItems[definition.id] ?? []}
+            rememberedTaskNames={rememberedTasksByCategory[definition.id]}
             onChange={(items) => handleSubItemsChange(definition.id, items)}
             onQuickTimer={(item) => handleQuickTimer(definition.id, item)}
             onCategoryTimer={() => handleCategoryTimer(definition.id)}
