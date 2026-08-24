@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTimer } from '../../context/TimerContext'
+import { useRecords } from '../../context/RecordsContext'
 import { useCategories } from '../../context/useCategories'
 import type { Category } from '../../types'
+import { recentTaskNames } from '../../lib/categoryItems'
 import {
   formatElapsed,
   getDisplayMs,
+  getSessionTargets,
   MAX_ACTIVE_TIMERS,
   MAX_TIMER_MS,
   type TimerMode,
@@ -30,6 +33,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
     discard,
     pushNotice,
   } = useTimer()
+  const { records } = useRecords()
   const { activeCategories, getCategory } = useCategories()
   const [showCreate, setShowCreate] = useState(() => sessions.length === 0)
   const [taskName, setTaskName] = useState('')
@@ -59,6 +63,19 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
   useEffect(() => {
     if (sessions.length === 0) setShowCreate(true)
   }, [sessions.length])
+
+  const categoryDefinition = getCategory(category)
+  const activeTaskNames = useMemo(() => new Set(
+    sessions
+      .flatMap((timer) => getSessionTargets(timer))
+      .filter((target) => target.category === category)
+      .map((target) => target.taskName.trim().toLocaleLowerCase()),
+  ), [category, sessions])
+  const rememberedTaskNames = useMemo(() => recentTaskNames(records, category, undefined, 8)
+    .filter((name) => (
+      name.toLocaleLowerCase() !== categoryDefinition.label.toLocaleLowerCase() &&
+      !activeTaskNames.has(name.toLocaleLowerCase())
+    )), [activeTaskNames, category, categoryDefinition.label, records])
 
   const handleStart = () => {
     const definition = getCategory(category)
@@ -256,7 +273,10 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
               <span className="sr-only">任务大类</span>
               <select
                 value={category}
-                onChange={(event) => setCategory(event.target.value)}
+                onChange={(event) => {
+                  setCategory(event.target.value)
+                  setTaskName('')
+                }}
                 className="min-h-12 w-full appearance-none rounded-[10px] border border-terracotta/25 bg-calico py-2 pl-3 pr-8 text-base font-bold text-terracotta focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
               >
                 {activeCategories.map((definition) => (
@@ -277,6 +297,39 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
               className="min-h-12 min-w-0 rounded-[10px] border border-terracotta/25 bg-calico px-3 text-base placeholder:text-stone-400 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"
             />
           </div>
+
+          {rememberedTaskNames.length > 0 && (
+            <div className="mt-3" aria-labelledby="remembered-tasks-title">
+              <div className="flex items-baseline justify-between gap-3">
+                <p id="remembered-tasks-title" className="text-xs font-extrabold text-terracotta">
+                  常用任务
+                </p>
+                <p className="text-xs text-stone-light">点一下填入</p>
+              </div>
+              <div
+                className="-mx-1 mt-2 flex max-w-full gap-2 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                aria-label={`${categoryDefinition.label}常用任务`}
+              >
+                {rememberedTaskNames.map((name) => {
+                  const selected = taskName.trim().toLocaleLowerCase() === name.toLocaleLowerCase()
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setTaskName(name)}
+                      className={`min-h-11 shrink-0 rounded-[8px] border px-3 text-sm font-bold transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-chrome-yellow/60 ${selected
+                        ? 'border-depot-green bg-depot-green text-chrome-yellow'
+                        : 'border-terracotta/25 bg-calico text-terracotta active:bg-cream-dark'
+                      }`}
+                    >
+                      {name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {mode === 'countdown' && (
             <div className="mt-3">
