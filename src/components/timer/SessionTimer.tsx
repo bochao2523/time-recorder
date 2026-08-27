@@ -25,7 +25,6 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
   const {
     sessions,
     now,
-    pendingReadingCompletion,
     start,
     pause,
     resume,
@@ -49,10 +48,6 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
     if (activeCategories.some((item) => item.id === category)) return
     setCategory(activeCategories[0]?.id ?? 'study')
   }, [activeCategories, category])
-
-  useEffect(() => {
-    if (category === 'reading' && mode === 'countdown') setMode('stopwatch')
-  }, [category, mode])
 
   useEffect(() => {
     if (!confirmDiscardId) return
@@ -80,10 +75,6 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
   const handleStart = () => {
     const definition = getCategory(category)
     const trimmedName = taskName.trim()
-    if (category === 'reading' && !trimmedName) {
-      pushNotice({ message: '阅读计时需要填写书名', type: 'error' })
-      return
-    }
     const name = trimmedName || definition.label
     if (mode === 'countdown') {
       if (!Number.isInteger(durationMinutes) || durationMinutes < 1) {
@@ -99,13 +90,10 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
       date: today(),
       mode,
       durationMinutes: mode === 'countdown' ? durationMinutes : undefined,
-      completionKind: category === 'reading' ? 'reading' : undefined,
     })
     if (!ok) {
       pushNotice({
-        message: pendingReadingCompletion
-          ? '请先填写上一次阅读的页码'
-          : sessions.length >= MAX_ACTIVE_TIMERS
+        message: sessions.length >= MAX_ACTIVE_TIMERS
             ? `最多同时运行 ${MAX_ACTIVE_TIMERS} 个计时器`
             : `「${name}」已经在计时`,
         type: 'error',
@@ -194,11 +182,11 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
                         type="button"
                         onClick={() => {
                           stop(timer.id)
-                          if (timer.completionKind === 'reading') onFinished?.()
+                          onFinished?.()
                         }}
                         className="min-h-11 rounded-[8px] bg-terracotta text-xs font-extrabold text-calico active:opacity-85"
                       >
-                        {timer.completionKind === 'reading' ? '结束并填页码' : '结束并保存'}
+                        结束并保存
                       </button>
                       <button
                         ref={(element) => {
@@ -371,7 +359,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
           <button
             type="button"
             onClick={handleStart}
-            disabled={!canStart || Boolean(pendingReadingCompletion)}
+            disabled={!canStart}
             className="mt-4 min-h-12 w-full rounded-[10px] bg-chrome-yellow px-4 text-sm font-extrabold text-terracotta disabled:cursor-not-allowed disabled:opacity-40 active:bg-[#e8bf00]"
           >
             开始这个计时器

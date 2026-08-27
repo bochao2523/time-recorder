@@ -1,239 +1,109 @@
 import { useEffect, useMemo, useState } from 'react'
-import { PageCard } from '../components/layout/Layout'
 import { ReadingInsights } from '../components/reading/ReadingInsights'
 import { useRecords } from '../context/RecordsContext'
 import { useTimer } from '../context/TimerContext'
-import { formatMinutes, today } from '../lib/dateUtils'
+import { formatMinutes, formatShortDate, today } from '../lib/dateUtils'
 import { totalReadingPages } from '../lib/readingLogs'
-import { buildReadingBookInsights, collectReadingSessions, recentReadingBooks } from '../lib/readingInsights'
-import { formatElapsed, getDisplayMs, MAX_ACTIVE_TIMERS } from '../lib/timerStorage'
+import { buildReadingBookInsights, collectReadingSessions, type ReadingBookInsights } from '../lib/readingInsights'
+import { MAX_ACTIVE_TIMERS } from '../lib/timerStorage'
+import type { ReadingBookMeta } from '../types'
+
+type BookView = { meta: ReadingBookMeta; insights: ReadingBookInsights; finished: boolean }
 
 export function ReadingPage() {
   const { records, readingBooks, getRecordByDate, setReadingBookTotalPages } = useRecords()
-  const {
-    sessions,
-    now,
-    pendingReadingCompletion,
-    start,
-    pause,
-    resume,
-    stop,
-    openModal,
-    pushNotice,
-  } = useTimer()
-  const [bookTitle, setBookTitle] = useState('')
-  const [selectedAnalysisBook, setSelectedAnalysisBook] = useState('')
+  const { sessions, pendingReadingCompletion, start, openModal, pushNotice } = useTimer()
+  const [showAdd, setShowAdd] = useState(readingBooks.length === 0)
+  const [titleInput, setTitleInput] = useState('')
+  const [pagesInput, setPagesInput] = useState('')
+  const [selectedTitle, setSelectedTitle] = useState('')
 
   const readingSessions = useMemo(() => collectReadingSessions(records), [records])
-  const recentBooks = useMemo(() => recentReadingBooks(readingSessions, 5), [readingSessions])
-  const analysisBookTitles = useMemo(() => {
-    const candidates = [
-      ...recentReadingBooks(readingSessions, 50),
-      ...sessions.filter((timer) => timer.completionKind === 'reading').map((timer) => timer.taskName),
-      ...(pendingReadingCompletion ? [pendingReadingCompletion.bookTitle] : []),
-      ...readingBooks.map((book) => book.title),
-    ]
-    const seen = new Set<string>()
-    return candidates.filter((title) => {
-      const key = title.trim().toLocaleLowerCase()
-      if (!key || seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-  }, [pendingReadingCompletion, readingBooks, readingSessions, sessions])
+  const books = useMemo<BookView[]>(() => readingBooks.map((meta) => {
+    const insights = buildReadingBookInsights(readingSessions, meta.title, meta.totalPages)
+    return { meta, insights, finished: insights.currentPage >= meta.totalPages }
+  }).sort((a, b) => Number(a.finished) - Number(b.finished) || b.meta.updatedAt.localeCompare(a.meta.updatedAt)), [readingBooks, readingSessions])
+  const activeBooks = books.filter((book) => !book.finished)
+  const finishedBooks = books.filter((book) => book.finished)
+  const dedicatedTimer = sessions.find((timer) => timer.completionKind === 'reading')
+  const otherTimerCount = sessions.filter((timer) => timer.completionKind !== 'reading').length
 
   useEffect(() => {
-    if (selectedAnalysisBook && analysisBookTitles.includes(selectedAnalysisBook)) return
-    setSelectedAnalysisBook(analysisBookTitles[0] ?? '')
-  }, [analysisBookTitles, selectedAnalysisBook])
+    if (selectedTitle && books.some((book) => book.meta.title === selectedTitle)) return
+    setSelectedTitle(books[0]?.meta.title ?? '')
+  }, [books, selectedTitle])
 
-  const selectedBookMeta = readingBooks.find((book) => (
-    book.title.toLocaleLowerCase() === selectedAnalysisBook.toLocaleLowerCase()
-  ))
-  const selectedInsights = useMemo(() => (
-    selectedAnalysisBook
-      ? buildReadingBookInsights(readingSessions, selectedAnalysisBook, selectedBookMeta?.totalPages)
-      : null
-  ), [readingSessions, selectedAnalysisBook, selectedBookMeta?.totalPages])
-
+  const selected = books.find((book) => book.meta.title === selectedTitle)
   const todayRecord = getRecordByDate(today())
   const todayLogs = todayRecord?.readingLogs ?? []
-  const todayMinutes = todayRecord?.minutes.reading ?? 0
-  const todayPages = totalReadingPages(todayLogs)
-  const readingTimers = sessions.filter((timer) => timer.completionKind === 'reading')
-  const otherTimerCount = sessions.length - readingTimers.length
+  const todayBookMinutes = todayLogs.reduce((sum, log) => sum + (log.minutes ?? 0), 0)
+  const validPages = Number(pagesInput)
+  const canAdd = titleInput.trim().length > 0 && Number.isInteger(validPages) && validPages >= 1
 
-  const handleStart = () => {
-    const title = bookTitle.trim()
-    if (!title) {
-      pushNotice({ message: '请先选择或填写书名', type: 'error' })
+  const addBook = (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!canAdd) return
+    const title = titleInput.trim()
+    const duplicate = readingBooks.find((book) => book.title.toLocaleLowerCase() === title.toLocaleLowerCase())
+    if (duplicate) {
+      pushNotice({ message: `「${duplicate.title}」已在书架中`, type: 'error' })
+      setSelectedTitle(duplicate.title)
       return
     }
-    if (pendingReadingCompletion) {
-      pushNotice({ message: '请先填写上一次阅读的页码', type: 'error' })
-      return
-    }
-    if (readingTimers.some((timer) => timer.taskName.trim() === title)) {
-      pushNotice({ message: `「${title}」已经在独立计时`, type: 'error' })
-      return
-    }
-    const ok = start(title, 'reading', {
-      date: today(),
-      mode: 'stopwatch',
-      completionKind: 'reading',
-    })
-    if (!ok) {
-      pushNotice({ message: sessions.length >= MAX_ACTIVE_TIMERS ? `最多同时运行 ${MAX_ACTIVE_TIMERS} 个计时器` : '阅读计时未开始，请重试', type: 'error' })
-      return
-    }
-    pushNotice({ message: `已开始「${title}」独立阅读计时`, type: 'success' })
-    setSelectedAnalysisBook(title)
-    setBookTitle('')
+    setReadingBookTotalPages(title, validPages)
+    setSelectedTitle(title)
+    setTitleInput('')
+    setPagesInput('')
+    setShowAdd(false)
+    pushNotice({ message: `已添加《${title}》`, type: 'success' })
   }
 
-  return (
-    <div className="no-layout-animation space-y-3">
-      {readingTimers.length > 0 && (
-        <section className="depot-cloth stitched-panel overflow-hidden rounded-[14px] p-4 sm:p-5" aria-labelledby="reading-active-title">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <h2 id="reading-active-title" className="text-xl font-extrabold text-chrome-yellow">正在阅读</h2>
-              <p className="mt-1 text-xs text-chrome-yellow/70">每本书可以分别暂停和结束</p>
-            </div>
-            <span className="depot-display text-sm font-extrabold tabular-nums text-chrome-yellow">{readingTimers.length} 本</span>
-          </div>
+  const startBook = (book: BookView) => {
+    if (book.finished) return
+    if (pendingReadingCompletion) {
+      pushNotice({ message: '请先完成上一次阅读的页码录入', type: 'error' })
+      return
+    }
+    if (dedicatedTimer) {
+      pushNotice({ message: `《${dedicatedTimer.taskName}》正在阅读中`, type: 'error' })
+      return
+    }
+    const ok = start(book.meta.title, 'reading', { mode: 'stopwatch', completionKind: 'reading', date: today() })
+    if (!ok) pushNotice({ message: sessions.length >= MAX_ACTIVE_TIMERS ? `最多同时运行 ${MAX_ACTIVE_TIMERS} 个计时器` : '阅读计时未开始', type: 'error' })
+  }
 
-          <ol className="mt-4 space-y-2.5">
-            {readingTimers.map((timer) => (
-              <li key={timer.id} className="rounded-[12px] border border-chrome-yellow/35 bg-depot-deep/45 p-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${timer.status === 'paused' ? 'bg-calico/55' : 'bg-chrome-yellow'}`} aria-hidden />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-extrabold text-chrome-yellow">{timer.taskName}</p>
-                    <p className="mt-0.5 text-[11px] text-chrome-yellow/65">{timer.status === 'paused' ? '已暂停' : '计时中'}</p>
-                  </div>
-                  <p className="stable-timer-slot depot-display shrink-0 text-right text-3xl font-extrabold tabular-nums text-chrome-yellow">
-                    {formatElapsed(getDisplayMs(timer, now))}
-                  </p>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-dashed border-chrome-yellow/25 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => timer.status === 'paused' ? resume(timer.id) : pause(timer.id)}
-                    className="min-h-11 rounded-[8px] border border-chrome-yellow/50 text-xs font-bold text-chrome-yellow active:bg-white/10"
-                  >
-                    {timer.status === 'paused' ? '继续阅读' : '暂停'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => stop(timer.id)}
-                    className="min-h-11 rounded-[8px] bg-chrome-yellow text-xs font-extrabold text-terracotta active:bg-[#e8bf00]"
-                  >
-                    结束并填写页码
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+  const BookCard = ({ book }: { book: BookView }) => {
+    const percent = Math.round(book.insights.progressPercent ?? 0)
+    return <article className="calico-surface stitched-light overflow-hidden rounded-[14px] p-4">
+      <button type="button" onClick={() => setSelectedTitle(book.meta.title)} className="flex min-h-20 w-full items-center gap-4 text-left">
+        <span className={`grid h-20 w-16 shrink-0 place-items-center rounded-[7px_13px_13px_7px] border text-2xl shadow-[inset_7px_0_10px_rgba(34,17,3,0.18)] ${book.finished ? 'border-steel/35 bg-steel text-white' : 'border-chrome-yellow/40 bg-[#e4a52e] text-terracotta'}`} aria-hidden>📖</span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-lg font-extrabold text-terracotta">{book.meta.title}</span>
+          <span className="mt-1 block text-xs font-bold text-stone-light">{book.finished ? '已读完' : book.insights.currentPage ? `读到 ${book.insights.currentPage} / ${book.meta.totalPages} 页` : `尚未开始 · 共 ${book.meta.totalPages} 页`}</span>
+          <span className="mt-3 block h-2 overflow-hidden rounded-full bg-terracotta/10"><span className="block h-full rounded-full bg-[#1769d2]" style={{ width: `${percent}%` }} /></span>
+        </span>
+        <span className="depot-display shrink-0 text-xl font-extrabold tabular-nums text-terracotta">{percent}%</span>
+      </button>
+      {book.finished ? <div className="mt-3 grid grid-cols-3 gap-2 border-t border-dashed border-terracotta/25 pt-3 text-center">
+        <span><b className="block text-sm text-terracotta">{formatMinutes(book.insights.totalMinutes)}</b><small className="text-stone-light">总时间</small></span>
+        <span><b className="block text-sm text-terracotta">{book.insights.readingDays} 天</b><small className="text-stone-light">阅读天数</small></span>
+        <span><b className="block text-xs text-terracotta">{book.insights.firstDate ? `${formatShortDate(book.insights.firstDate)}–${formatShortDate(book.insights.lastDate ?? book.insights.firstDate)}` : '—'}</b><small className="text-stone-light">阅读日期</small></span>
+      </div> : <button type="button" onClick={() => startBook(book)} disabled={Boolean(dedicatedTimer) || Boolean(pendingReadingCompletion)} className="mt-3 min-h-12 w-full rounded-[10px] bg-[#1769d2] text-sm font-extrabold text-white disabled:opacity-35">开始阅读</button>}
+    </article>
+  }
 
-      <section className="depot-cloth stitched-panel overflow-hidden rounded-[14px] p-4 sm:p-5" aria-labelledby="choose-book-title">
-          <div className="flex items-start gap-3">
-            <span className="depot-eyelet mt-1" aria-hidden />
-            <div className="min-w-0">
-              <h2 id="choose-book-title" className="text-xl font-extrabold text-chrome-yellow">{readingTimers.length ? '开始另一本书' : '先选择今天要读的书'}</h2>
-              <p className="mt-1 text-xs leading-5 text-chrome-yellow/70">每本书都有独立计时；结束的时候再填写页码。</p>
-            </div>
-          </div>
+  return <div className="no-layout-animation space-y-3">
+    <section className="depot-cloth stitched-panel rounded-[14px] p-4 text-chrome-yellow">
+      <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold text-chrome-yellow/65">BOOK DEPOT</p><h2 className="mt-1 text-2xl font-extrabold">我的书架</h2><p className="mt-1 text-xs text-chrome-yellow/70">书名和总页数是书籍进度的基础</p></div><button type="button" onClick={() => setShowAdd((value) => !value)} className="min-h-11 shrink-0 rounded-[9px] bg-chrome-yellow px-3 text-sm font-extrabold text-terracotta">{showAdd ? '取消' : '+ 添加书籍'}</button></div>
+      {showAdd && <form onSubmit={addBook} className="mt-4 grid gap-3 border-t border-dashed border-chrome-yellow/30 pt-4 sm:grid-cols-[1fr_9rem_auto] sm:items-end"><label className="text-xs font-bold">书名<input value={titleInput} onChange={(event) => setTitleInput(event.target.value.slice(0, 80))} placeholder="例如：设计心理学" className="mt-1 min-h-12 w-full rounded-[10px] border border-chrome-yellow/40 bg-calico px-3 text-base font-bold text-terracotta outline-none focus:ring-2 focus:ring-chrome-yellow" /></label><label className="text-xs font-bold">总页数<input value={pagesInput} onChange={(event) => setPagesInput(event.target.value.replace(/\D/g, '').slice(0, 5))} inputMode="numeric" placeholder="412" className="depot-display mt-1 min-h-12 w-full rounded-[10px] border border-chrome-yellow/40 bg-calico px-3 text-base font-bold text-terracotta outline-none focus:ring-2 focus:ring-chrome-yellow" /></label><button disabled={!canAdd} className="min-h-12 rounded-[10px] bg-chrome-yellow px-5 font-extrabold text-terracotta disabled:opacity-35">保存</button></form>}
+    </section>
 
-          {recentBooks.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs font-bold text-chrome-yellow/70">最近阅读</p>
-              <div className="mt-2 flex max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {recentBooks.map((title) => {
-                  const selected = bookTitle.trim() === title
-                  return (
-                    <button
-                      key={title}
-                      type="button"
-                      onClick={() => {
-                        setBookTitle(title)
-                        setSelectedAnalysisBook(title)
-                      }}
-                      className={`min-h-11 max-w-[13rem] shrink-0 truncate rounded-[10px] border px-3 text-sm font-bold ${selected ? 'border-chrome-yellow bg-chrome-yellow text-terracotta' : 'border-chrome-yellow/45 text-chrome-yellow active:bg-white/10'}`}
-                    >
-                      {title}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+    <section className="calico-surface stitched-light rounded-[14px] p-4"><div className="flex items-center justify-between"><div><h2 className="text-lg font-extrabold text-terracotta">今天的书籍阅读</h2><p className="mt-1 text-xs text-stone-light">不包含普通“阅读”任务计时</p></div><div className="text-right"><b className="depot-display block text-2xl text-terracotta">{totalReadingPages(todayLogs)} 页</b><small className="font-bold text-stone-light">{todayLogs.length} 次 · {formatMinutes(todayBookMinutes)}</small></div></div></section>
 
-          <label className="mt-4 block text-xs font-bold text-chrome-yellow/75">
-            书名
-            <input
-              id="reading-book-input"
-              type="text"
-              value={bookTitle}
-              onChange={(event) => setBookTitle(event.target.value.slice(0, 80))}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') handleStart()
-              }}
-              placeholder="输入书名，例如《设计心理学》"
-              autoComplete="off"
-              className="mt-1 min-h-12 w-full rounded-[10px] border border-chrome-yellow/45 bg-calico px-3 text-base font-bold text-terracotta placeholder:font-medium placeholder:text-stone-light focus:border-chrome-yellow focus:outline-none focus:ring-2 focus:ring-chrome-yellow/60"
-            />
-          </label>
-
-          <button
-            type="button"
-            onClick={handleStart}
-            disabled={!bookTitle.trim() || sessions.length >= MAX_ACTIVE_TIMERS || Boolean(pendingReadingCompletion) || readingTimers.some((timer) => timer.taskName.trim() === bookTitle.trim())}
-            className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-[10px] bg-chrome-yellow px-4 text-base font-extrabold text-terracotta disabled:cursor-not-allowed disabled:opacity-45 active:bg-[#e8bf00]"
-          >
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4V8Z" /></svg>
-            开始阅读计时
-          </button>
-        </section>
-
-      {otherTimerCount > 0 && (
-        <PageCard className="p-4">
-          <p className="text-sm font-extrabold text-terracotta">还有 {otherTimerCount} 个其他任务在独立计时</p>
-          <p className="mt-1 text-xs text-stone-light">它们不会影响阅读计时，可以分别结束。</p>
-          <button type="button" onClick={openModal} className="mt-3 min-h-11 w-full rounded-[10px] border border-terracotta/30 text-sm font-bold text-terracotta active:bg-cream-dark">管理全部计时器</button>
-        </PageCard>
-      )}
-
-      <section className="calico-surface stitched-light rounded-[14px] p-4" aria-labelledby="reading-today-title">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 id="reading-today-title" className="text-base font-extrabold text-terracotta">今天的阅读</h2>
-            <p className="mt-0.5 text-xs text-stone-light">保存页码后自动汇总</p>
-          </div>
-          <div className="flex shrink-0 items-baseline gap-1 text-terracotta">
-            <span className="depot-display text-3xl font-extrabold tabular-nums">{todayPages}</span>
-            <span className="text-xs font-bold">页</span>
-          </div>
-        </div>
-        <div className="mt-3 flex items-center justify-between border-t border-dashed border-terracotta/25 pt-3 text-xs">
-          <span className="text-stone-light">{todayLogs.length} 次阅读</span>
-          <span className="font-bold text-terracotta">主页面已记录 {formatMinutes(todayMinutes)}</span>
-        </div>
-      </section>
-
-      <ReadingInsights
-        bookTitles={analysisBookTitles}
-        selectedTitle={selectedAnalysisBook}
-        onSelectTitle={setSelectedAnalysisBook}
-        insights={selectedInsights}
-        totalPages={selectedBookMeta?.totalPages}
-        onSaveTotalPages={(totalPages) => {
-          setReadingBookTotalPages(selectedAnalysisBook, totalPages)
-          pushNotice({ message: `已保存「${selectedAnalysisBook}」总页数`, type: 'success' })
-        }}
-      />
-    </div>
-  )
+    {activeBooks.length > 0 && <section aria-labelledby="reading-books-active"><div className="mb-2 flex items-end justify-between px-1"><h2 id="reading-books-active" className="text-xl font-extrabold text-terracotta">正在阅读</h2><span className="text-xs font-bold text-stone-light">{activeBooks.length} 本</span></div><div className="space-y-3">{activeBooks.map((book) => <BookCard key={book.meta.title} book={book} />)}</div></section>}
+    {finishedBooks.length > 0 && <section aria-labelledby="reading-books-finished"><div className="mb-2 flex items-end justify-between px-1"><h2 id="reading-books-finished" className="text-xl font-extrabold text-terracotta">已读完</h2><span className="text-xs font-bold text-stone-light">{finishedBooks.length} 本</span></div><div className="space-y-3">{finishedBooks.map((book) => <BookCard key={book.meta.title} book={book} />)}</div></section>}
+    {!books.length && !showAdd && <button type="button" onClick={() => setShowAdd(true)} className="calico-surface stitched-light min-h-36 w-full rounded-[14px] px-5 text-center font-extrabold text-terracotta">添加第一本书</button>}
+    {otherTimerCount > 0 && <button type="button" onClick={openModal} className="min-h-12 w-full rounded-[12px] border border-terracotta/25 bg-calico text-sm font-bold text-terracotta">还有 {otherTimerCount} 个其他任务在计时 · 查看</button>}
+    {selected && <ReadingInsights bookTitles={books.map((book) => book.meta.title)} selectedTitle={selectedTitle} onSelectTitle={setSelectedTitle} insights={selected.insights} totalPages={selected.meta.totalPages} onSaveTotalPages={(totalPages) => { setReadingBookTotalPages(selectedTitle, totalPages); pushNotice({ message: '已更新总页数', type: 'success' }) }} />}
+  </div>
 }

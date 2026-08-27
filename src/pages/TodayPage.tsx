@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { PageCard } from '../components/layout/Layout'
 import { DatePicker } from '../components/common/DatePicker'
 import { CategoryInput } from '../components/common/CategoryInput'
@@ -73,7 +73,6 @@ function formatSummaryTotal(minutes: number): string {
 
 export function TodayPage() {
   const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
   const { records, getRecordByDate, upsertRecord, deleteRecord } = useRecords()
   const { sessions, now, start, openModal, pushNotice } = useTimer()
   const { activeCategories, getCategory } = useCategories()
@@ -162,7 +161,6 @@ export function TodayPage() {
       const ok = start(name, cat, {
         date: selectedDate,
         mode: 'stopwatch',
-        completionKind: cat === 'reading' ? 'reading' : undefined,
       })
       if (!ok) {
         pushNotice({ message: '计时未开始，可能已达到 8 个计时器上限', type: 'error' })
@@ -177,12 +175,6 @@ export function TodayPage() {
   const handleCategoryTimer = useCallback(
     (cat: Category) => {
       const label = getCategory(cat).label
-
-      if (cat === 'reading') {
-        navigate('/reading')
-        pushNotice({ message: '请先选择或填写书名，再开始阅读计时', type: 'success' })
-        return
-      }
 
       const existingTimer = sessions.find((timer) => (
         getSessionTargets(timer).some((target) => (
@@ -201,7 +193,7 @@ export function TodayPage() {
       }
       pushNotice({ message: `已开始「${label}」独立计时`, type: 'success' })
     },
-    [getCategory, navigate, sessions, start, openModal, pushNotice, selectedDate],
+    [getCategory, sessions, start, openModal, pushNotice, selectedDate],
   )
 
   const focusManualEntry = useCallback(() => {

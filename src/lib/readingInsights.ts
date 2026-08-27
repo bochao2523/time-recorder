@@ -28,6 +28,7 @@ export interface ReadingBookInsights {
   currentPage: number
   readingDays: number
   firstDate: string | null
+  lastDate: string | null
   averageDailyMinutes: number
   averageDailyPages: number
   secondsPerPage: number | null
@@ -102,6 +103,7 @@ export function buildReadingBookInsights(
     .map((session) => session.date)
   const readingDays = new Set(activeDates).size
   const firstDate = activeDates.length ? [...activeDates].sort()[0] : null
+  const lastDate = activeDates.length ? [...activeDates].sort().at(-1) ?? null : null
   const averageDailyMinutes = readingDays ? totalMinutes / readingDays : 0
   const averageDailyPages = readingDays ? totalPagesRead / readingDays : 0
   const secondsPerPage = totalPagesRead > 0 && totalMinutes > 0
@@ -151,6 +153,7 @@ export function buildReadingBookInsights(
     currentPage,
     readingDays,
     firstDate,
+    lastDate,
     averageDailyMinutes,
     averageDailyPages,
     secondsPerPage,

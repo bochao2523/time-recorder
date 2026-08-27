@@ -278,7 +278,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   }, [sessions, now, persist, recordCompletions])
 
   const start = useCallback((taskName: string, category: Category, options: StartTimerOptions = {}) => {
-    if (pendingReadingCompletion) return false
+    if (pendingReadingCompletion && options.completionKind === 'reading') return false
     const targets = normalizeTimerTargets(
       options.targets?.length ? options.targets : [{ taskName, category }],
     )

@@ -5,6 +5,7 @@ import { TimerHeaderButton } from '../timer/TimerHeaderButton'
 import { TimerModal } from '../timer/TimerModal'
 import { TimerNotice } from '../timer/TimerNotice'
 import { ReadingCompletionModal } from '../reading/ReadingCompletionModal'
+import { ReadingFocusView } from '../reading/ReadingFocusView'
 
 export function Layout() {
   const { pathname } = useLocation()
@@ -44,6 +45,7 @@ export function Layout() {
       <TimerFloatingBar />
       <TimerModal />
       <ReadingCompletionModal />
+      <ReadingFocusView />
       <NavBar />
     </div>
   )
