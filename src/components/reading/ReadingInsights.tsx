@@ -10,6 +10,7 @@ interface ReadingInsightsProps {
   insights: ReadingBookInsights | null
   totalPages?: number
   onSaveTotalPages: (totalPages: number) => void
+  showBookSelector?: boolean
 }
 
 function ProgressRing({ currentPage, totalPages, percent }: { currentPage: number; totalPages?: number; percent: number | null }) {
@@ -58,6 +59,7 @@ export function ReadingInsights({
   insights,
   totalPages,
   onSaveTotalPages,
+  showBookSelector = true,
 }: ReadingInsightsProps) {
   const [totalPagesInput, setTotalPagesInput] = useState(totalPages ? String(totalPages) : '')
 
@@ -98,7 +100,7 @@ export function ReadingInsights({
             <h2 id="book-data-title" className="text-xl font-extrabold text-chrome-yellow">书籍数据</h2>
             <p className="mt-1 text-xs text-chrome-yellow/70">按书查看真实阅读进度</p>
           </div>
-          <label className="min-w-0 max-w-[55%] text-xs font-bold text-chrome-yellow/70">
+          {showBookSelector && <label className="min-w-0 max-w-[55%] text-xs font-bold text-chrome-yellow/70">
             <span className="sr-only">选择分析书籍</span>
             <select
               value={selectedTitle}
@@ -107,7 +109,7 @@ export function ReadingInsights({
             >
               {bookTitles.map((title) => <option key={title} value={title}>{title}</option>)}
             </select>
-          </label>
+          </label>}
         </div>
 
         <div className="mt-4 grid items-center gap-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
