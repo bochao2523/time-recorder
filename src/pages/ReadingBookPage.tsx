@@ -1,10 +1,10 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ReadingInsights } from '../components/reading/ReadingInsights'
 import { ReadingRecordManager } from '../components/reading/ReadingRecordManager'
 import { useRecords } from '../context/RecordsContext'
 import { useTimer } from '../context/TimerContext'
-import { formatMinutes, today } from '../lib/dateUtils'
+import { today } from '../lib/dateUtils'
 import { buildReadingBookInsights, collectReadingSessions } from '../lib/readingInsights'
 import { MAX_ACTIVE_TIMERS } from '../lib/timerStorage'
 
@@ -14,6 +14,35 @@ function BackIcon() {
 
 function BookGlyph() {
   return <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" /><path d="M8 6h8" /></svg>
+}
+
+function PageTotalEditor({
+  title,
+  currentPage,
+  totalPages,
+  onSave,
+}: {
+  title: string
+  currentPage: number
+  totalPages: number
+  onSave: (totalPages: number) => void
+}) {
+  const [value, setValue] = useState(String(totalPages))
+  useEffect(() => setValue(String(totalPages)), [title, totalPages])
+  const nextTotal = Number(value)
+  const valid = Number.isInteger(nextTotal) && nextTotal >= Math.max(1, currentPage)
+
+  return <section className="depot-cloth stitched-panel rounded-[14px] p-4 text-chrome-yellow" aria-labelledby="book-page-settings-title">
+    <div className="flex items-start justify-between gap-3">
+      <div><h2 id="book-page-settings-title" className="text-lg font-extrabold">书籍页数</h2><p className="mt-1 text-xs text-chrome-yellow/70">修改后会重新计算阅读进度</p></div>
+      <span className="depot-display shrink-0 text-xl font-extrabold tabular-nums">当前 {currentPage || 0} 页</span>
+    </div>
+    <form className="mt-4 flex items-end gap-2 border-t border-dashed border-chrome-yellow/30 pt-4" onSubmit={(event) => { event.preventDefault(); if (valid && nextTotal !== totalPages) onSave(nextTotal) }}>
+      <label className="min-w-0 flex-1 text-xs font-bold text-chrome-yellow/75">总页数<input value={value} onChange={(event) => setValue(event.target.value.replace(/\D/g, '').slice(0, 5))} inputMode="numeric" pattern="[0-9]*" aria-describedby="book-page-settings-help" className="depot-display mt-1 min-h-12 w-full rounded-[10px] border border-chrome-yellow/40 bg-calico px-3 text-lg font-extrabold tabular-nums text-terracotta outline-none focus:ring-2 focus:ring-chrome-yellow" /></label>
+      <button type="submit" disabled={!valid || nextTotal === totalPages} className="min-h-12 shrink-0 rounded-[10px] bg-chrome-yellow px-5 text-sm font-extrabold text-terracotta disabled:cursor-not-allowed disabled:opacity-40">保存</button>
+    </form>
+    <p id="book-page-settings-help" className={`mt-2 text-xs font-bold ${value && !valid ? 'text-[#ffd0c7]' : 'text-chrome-yellow/60'}`}>{value && !valid ? `总页数不能小于当前第 ${currentPage} 页` : `页数范围 1–99,999，当前设置为 ${totalPages} 页`}</p>
+  </section>
 }
 
 export function ReadingBookPage() {
@@ -29,6 +58,7 @@ export function ReadingBookPage() {
     deleteReadingBook,
   } = useRecords()
   const { sessions, pendingReadingCompletion, start, pushNotice } = useTimer()
+  const [activeTab, setActiveTab] = useState<'insights' | 'records'>('insights')
 
   const book = readingBooks.find((entry) => entry.title.toLocaleLowerCase() === requestedTitle.toLocaleLowerCase())
   const allReadingSessions = useMemo(() => collectReadingSessions(records), [records])
@@ -83,44 +113,50 @@ export function ReadingBookPage() {
         <strong className="depot-display shrink-0 text-2xl tabular-nums">{progress}%</strong>
       </div>
       <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-black/20"><span className="block h-full rounded-full bg-chrome-yellow" style={{ width: `${progress}%` }} /></div>
-      <div className="mt-4 grid grid-cols-2 gap-2 border-t border-dashed border-chrome-yellow/30 pt-4">
-        <div><p className="text-xs font-bold text-chrome-yellow/60">累计阅读</p><p className="depot-display mt-1 text-lg font-extrabold tabular-nums">{formatMinutes(insights.totalMinutes)}</p></div>
-        <div><p className="text-xs font-bold text-chrome-yellow/60">阅读记录</p><p className="depot-display mt-1 text-lg font-extrabold tabular-nums">{insights.sessions.length} 次</p></div>
-      </div>
       {!finished && <button type="button" onClick={startBook} disabled={Boolean(activeReadingTimer) || Boolean(pendingReadingCompletion)} className="mt-4 min-h-13 w-full rounded-[11px] bg-chrome-yellow px-4 text-base font-extrabold text-terracotta shadow-[0_3px_0_rgba(87,58,0,0.45)] disabled:cursor-not-allowed disabled:opacity-40">{thisBookIsTiming ? '正在阅读' : '开始阅读'}</button>}
     </section>
 
-    <ReadingInsights
-      bookTitles={[book.title]}
-      selectedTitle={book.title}
-      onSelectTitle={() => undefined}
-      insights={insights}
-      totalPages={book.totalPages}
-      onSaveTotalPages={(totalPages) => {
+    <div className="calico-surface stitched-light grid grid-cols-2 gap-1 rounded-[14px] p-1.5" role="tablist" aria-label="书籍详情内容">
+      <button type="button" role="tab" aria-selected={activeTab === 'insights'} aria-controls="reading-book-insights" id="reading-book-insights-tab" onClick={() => setActiveTab('insights')} className={`min-h-12 rounded-[10px] text-sm font-extrabold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta ${activeTab === 'insights' ? 'bg-terracotta text-calico' : 'text-terracotta'}`}>数据分析</button>
+      <button type="button" role="tab" aria-selected={activeTab === 'records'} aria-controls="reading-book-records" id="reading-book-records-tab" onClick={() => setActiveTab('records')} className={`min-h-12 rounded-[10px] text-sm font-extrabold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta ${activeTab === 'records' ? 'bg-terracotta text-calico' : 'text-terracotta'}`}>阅读记录 <span className="depot-display ml-1 tabular-nums opacity-70">{insights.sessions.length}</span></button>
+    </div>
+
+    {activeTab === 'insights' ? <div id="reading-book-insights" role="tabpanel" aria-labelledby="reading-book-insights-tab">
+      <ReadingInsights
+        bookTitles={[book.title]}
+        selectedTitle={book.title}
+        onSelectTitle={() => undefined}
+        insights={insights}
+        totalPages={book.totalPages}
+        onSaveTotalPages={() => undefined}
+        showBookSelector={false}
+        showBookOverview={false}
+      />
+    </div> : <div id="reading-book-records" role="tabpanel" aria-labelledby="reading-book-records-tab" className="space-y-3">
+      <PageTotalEditor title={book.title} currentPage={insights.currentPage} totalPages={book.totalPages} onSave={(totalPages) => {
         setReadingBookTotalPages(book.title, totalPages)
         pushNotice({ message: `《${book.title}》总页数已更新`, type: 'success' })
-      }}
-      showBookSelector={false}
-    />
-
-    <ReadingRecordManager
-      bookTitle={book.title}
-      totalPages={book.totalPages}
-      sessions={insights.sessions}
-      bookTimerActive={thisBookIsTiming}
-      onUpdateSession={(session, startPage, endPage) => {
-        const updated = updateReadingLogPages(session.date, session.id, startPage, endPage)
-        pushNotice({ message: updated ? '本次阅读页码已更新' : '没有找到这条阅读记录', type: updated ? 'success' : 'error' })
-      }}
-      onDeleteSession={(session) => {
-        const deleted = deleteReadingLog(session.date, session.id)
-        pushNotice({ message: deleted ? '这次阅读记录已删除' : '没有找到这条阅读记录', type: deleted ? 'success' : 'error' })
-      }}
-      onDeleteBook={(deleteHistory) => {
-        deleteReadingBook(book.title, deleteHistory)
-        pushNotice({ message: deleteHistory ? `《${book.title}》及阅读记录已删除` : `《${book.title}》已从书架删除`, type: 'success' })
-        navigate('/reading', { replace: true })
-      }}
-    />
+      }} />
+      <ReadingRecordManager
+        bookTitle={book.title}
+        totalPages={book.totalPages}
+        sessions={insights.sessions}
+        bookTimerActive={thisBookIsTiming}
+        defaultExpanded
+        onUpdateSession={(session, startPage, endPage) => {
+          const updated = updateReadingLogPages(session.date, session.id, startPage, endPage)
+          pushNotice({ message: updated ? '本次阅读页码已更新' : '没有找到这条阅读记录', type: updated ? 'success' : 'error' })
+        }}
+        onDeleteSession={(session) => {
+          const deleted = deleteReadingLog(session.date, session.id)
+          pushNotice({ message: deleted ? '这次阅读记录已删除' : '没有找到这条阅读记录', type: deleted ? 'success' : 'error' })
+        }}
+        onDeleteBook={(deleteHistory) => {
+          deleteReadingBook(book.title, deleteHistory)
+          pushNotice({ message: deleteHistory ? `《${book.title}》及阅读记录已删除` : `《${book.title}》已从书架删除`, type: 'success' })
+          navigate('/reading', { replace: true })
+        }}
+      />
+    </div>}
   </div>
 }

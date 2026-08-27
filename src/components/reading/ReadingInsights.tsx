@@ -11,6 +11,7 @@ interface ReadingInsightsProps {
   totalPages?: number
   onSaveTotalPages: (totalPages: number) => void
   showBookSelector?: boolean
+  showBookOverview?: boolean
 }
 
 function ProgressRing({ currentPage, totalPages, percent }: { currentPage: number; totalPages?: number; percent: number | null }) {
@@ -60,6 +61,7 @@ export function ReadingInsights({
   totalPages,
   onSaveTotalPages,
   showBookSelector = true,
+  showBookOverview = true,
 }: ReadingInsightsProps) {
   const [totalPagesInput, setTotalPagesInput] = useState(totalPages ? String(totalPages) : '')
 
@@ -94,7 +96,7 @@ export function ReadingInsights({
 
   return (
     <div className="space-y-3">
-      <section className="depot-cloth stitched-panel overflow-hidden rounded-[14px] p-4 sm:p-5" aria-labelledby="book-data-title">
+      {showBookOverview && <section className="depot-cloth stitched-panel overflow-hidden rounded-[14px] p-4 sm:p-5" aria-labelledby="book-data-title">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 id="book-data-title" className="text-xl font-extrabold text-chrome-yellow">书籍数据</h2>
@@ -158,7 +160,7 @@ export function ReadingInsights({
         {insights.currentPage > 0 && totalPagesInput && !canSaveTotalPages && (
           <p className="mt-2 text-xs font-bold text-[#ffd0c7]">总页数不能小于当前第 {insights.currentPage} 页。</p>
         )}
-      </section>
+      </section>}
 
       <section className="calico-surface stitched-light overflow-hidden rounded-[14px]" aria-labelledby="reading-analysis-title">
         <div className="flex items-end justify-between gap-3 px-4 pb-3 pt-4">

@@ -15,6 +15,7 @@ interface ReadingRecordManagerProps {
   totalPages: number
   sessions: ReadingSessionData[]
   bookTimerActive: boolean
+  defaultExpanded?: boolean
   onUpdateSession: (session: ReadingSessionData, startPage: number, endPage: number) => void
   onDeleteSession: (session: ReadingSessionData) => void
   onDeleteBook: (deleteHistory: boolean) => void
@@ -25,11 +26,12 @@ export function ReadingRecordManager({
   totalPages,
   sessions,
   bookTimerActive,
+  defaultExpanded = false,
   onUpdateSession,
   onDeleteSession,
   onDeleteBook,
 }: ReadingRecordManagerProps) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(defaultExpanded)
   const [visibleCount, setVisibleCount] = useState(6)
   const [action, setAction] = useState<ManagerAction>(null)
   const [startInput, setStartInput] = useState('')
