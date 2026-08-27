@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ReadingInsights } from '../components/reading/ReadingInsights'
+import { ReadingRecordManager } from '../components/reading/ReadingRecordManager'
 import { useRecords } from '../context/RecordsContext'
 import { useTimer } from '../context/TimerContext'
 import { formatMinutes, formatShortDate, today } from '../lib/dateUtils'
@@ -11,7 +12,15 @@ import type { ReadingBookMeta } from '../types'
 type BookView = { meta: ReadingBookMeta; insights: ReadingBookInsights; finished: boolean }
 
 export function ReadingPage() {
-  const { records, readingBooks, getRecordByDate, setReadingBookTotalPages } = useRecords()
+  const {
+    records,
+    readingBooks,
+    getRecordByDate,
+    setReadingBookTotalPages,
+    updateReadingLogPages,
+    deleteReadingLog,
+    deleteReadingBook,
+  } = useRecords()
   const { sessions, pendingReadingCompletion, start, openModal, pushNotice } = useTimer()
   const [showAdd, setShowAdd] = useState(readingBooks.length === 0)
   const [titleInput, setTitleInput] = useState('')
@@ -104,6 +113,29 @@ export function ReadingPage() {
     {finishedBooks.length > 0 && <section aria-labelledby="reading-books-finished"><div className="mb-2 flex items-end justify-between px-1"><h2 id="reading-books-finished" className="text-xl font-extrabold text-terracotta">已读完</h2><span className="text-xs font-bold text-stone-light">{finishedBooks.length} 本</span></div><div className="space-y-3">{finishedBooks.map((book) => <BookCard key={book.meta.title} book={book} />)}</div></section>}
     {!books.length && !showAdd && <button type="button" onClick={() => setShowAdd(true)} className="calico-surface stitched-light min-h-36 w-full rounded-[14px] px-5 text-center font-extrabold text-terracotta">添加第一本书</button>}
     {otherTimerCount > 0 && <button type="button" onClick={openModal} className="min-h-12 w-full rounded-[12px] border border-terracotta/25 bg-calico text-sm font-bold text-terracotta">还有 {otherTimerCount} 个其他任务在计时 · 查看</button>}
-    {selected && <ReadingInsights bookTitles={books.map((book) => book.meta.title)} selectedTitle={selectedTitle} onSelectTitle={setSelectedTitle} insights={selected.insights} totalPages={selected.meta.totalPages} onSaveTotalPages={(totalPages) => { setReadingBookTotalPages(selectedTitle, totalPages); pushNotice({ message: '已更新总页数', type: 'success' }) }} />}
+    {selected && <>
+      <ReadingInsights bookTitles={books.map((book) => book.meta.title)} selectedTitle={selectedTitle} onSelectTitle={setSelectedTitle} insights={selected.insights} totalPages={selected.meta.totalPages} onSaveTotalPages={(totalPages) => { setReadingBookTotalPages(selectedTitle, totalPages); pushNotice({ message: `已将《${selectedTitle}》调整为 ${totalPages} 页`, type: 'success' }) }} />
+      <ReadingRecordManager
+        key={selected.meta.title}
+        bookTitle={selected.meta.title}
+        totalPages={selected.meta.totalPages}
+        sessions={selected.insights.sessions}
+        bookTimerActive={dedicatedTimer?.taskName.toLocaleLowerCase() === selected.meta.title.toLocaleLowerCase()}
+        onUpdateSession={(session, startPage, endPage) => {
+          updateReadingLogPages(session.date, session.id, startPage, endPage)
+          pushNotice({ message: '已更新这次阅读页码', type: 'success' })
+        }}
+        onDeleteSession={(session) => {
+          deleteReadingLog(session.date, session.id)
+          pushNotice({ message: '已删除这次阅读记录', type: 'success' })
+        }}
+        onDeleteBook={(deleteHistory) => {
+          const title = selected.meta.title
+          deleteReadingBook(title, deleteHistory)
+          setSelectedTitle('')
+          pushNotice({ message: deleteHistory ? `已删除《${title}》及全部阅读记录` : `已将《${title}》移出书架，历史仍保留`, type: 'success' })
+        }}
+      />
+    </>}
   </div>
 }

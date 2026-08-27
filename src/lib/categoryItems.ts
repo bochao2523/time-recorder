@@ -229,3 +229,48 @@ export function appendReadingSessionToRecord(
     ]),
   }
 }
+
+/** 修改单次书籍阅读的页码，不改变计时分钟。 */
+export function updateReadingSessionPages(
+  record: DailyRecord,
+  sessionId: string,
+  startPage: number,
+  endPage: number,
+): DailyRecord | null {
+  if (!Number.isInteger(startPage) || startPage < 1 || !Number.isInteger(endPage) || endPage < startPage) return null
+  let found = false
+  const readingLogs = (record.readingLogs ?? []).map((entry) => {
+    if (entry.id !== sessionId) return entry
+    found = true
+    return { ...entry, startPage, endPage }
+  })
+  if (!found) return null
+  return buildRecordFromForm(record.date, subItemsFromRecord(record), readingLogs)
+}
+
+/** 删除符合条件的书籍阅读，并只扣除这些记录自己写入的分钟。 */
+export function removeReadingSessions(
+  record: DailyRecord,
+  shouldRemove: (entry: ReadingLogEntry) => boolean,
+): DailyRecord | null {
+  const removed = (record.readingLogs ?? []).filter(shouldRemove)
+  if (!removed.length) return record
+  const remainingLogs = (record.readingLogs ?? []).filter((entry) => !shouldRemove(entry))
+  const removedMinutes = new Map<string, number>()
+  for (const entry of removed) {
+    const key = entry.bookTitle.trim().toLocaleLowerCase()
+    removedMinutes.set(key, (removedMinutes.get(key) ?? 0) + (entry.minutes ?? 0))
+  }
+
+  const subItems = subItemsFromRecord(record)
+  const readingItems = [...(subItems.reading ?? [])]
+  for (const [key, minutes] of removedMinutes) {
+    const index = readingItems.findIndex((item) => item.name.trim().toLocaleLowerCase() === key)
+    if (index < 0 || minutes <= 0) continue
+    const nextMinutes = Math.max(0, readingItems[index].minutes - minutes)
+    if (nextMinutes === 0) readingItems.splice(index, 1)
+    else readingItems[index] = { ...readingItems[index], minutes: nextMinutes }
+  }
+
+  return buildRecordFromForm(record.date, { ...subItems, reading: readingItems }, remainingLogs)
+}

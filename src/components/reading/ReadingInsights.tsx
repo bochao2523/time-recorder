@@ -140,7 +140,7 @@ export function ReadingInsights({
           }}
         >
           <label className="min-w-0 flex-1 text-xs font-bold text-chrome-yellow/75">
-            本书总页数
+            调整本书总页数
             <input
               type="text"
               inputMode="numeric"
@@ -151,7 +151,7 @@ export function ReadingInsights({
               className="depot-display mt-1 min-h-12 w-full rounded-[10px] border border-chrome-yellow/40 bg-calico px-3 text-base font-extrabold tabular-nums text-terracotta placeholder:font-sans placeholder:text-sm placeholder:font-medium placeholder:text-stone-light focus:outline-none focus:ring-2 focus:ring-chrome-yellow"
             />
           </label>
-          <button type="submit" disabled={!canSaveTotalPages} className="min-h-12 shrink-0 rounded-[10px] bg-chrome-yellow px-4 text-sm font-extrabold text-terracotta disabled:cursor-not-allowed disabled:opacity-40 active:bg-[#e8bf00]">保存</button>
+          <button type="submit" disabled={!canSaveTotalPages || validTotalPages === totalPages} className="min-h-12 shrink-0 rounded-[10px] bg-chrome-yellow px-4 text-sm font-extrabold text-terracotta disabled:cursor-not-allowed disabled:opacity-40 active:bg-[#e8bf00]">更新页数</button>
         </form>
         {insights.currentPage > 0 && totalPagesInput && !canSaveTotalPages && (
           <p className="mt-2 text-xs font-bold text-[#ffd0c7]">总页数不能小于当前第 {insights.currentPage} 页。</p>

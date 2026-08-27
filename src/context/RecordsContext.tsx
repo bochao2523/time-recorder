@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { DailyRecord, ImportMode, ReadingBookMeta } from '../types'
+import { removeReadingSessions, updateReadingSessionPages } from '../lib/categoryItems'
 import { useCategories } from './useCategories'
 import {
   deleteRecord as deleteRecordStorage,
@@ -33,6 +34,9 @@ interface RecordsContextValue {
   exportRecords: () => void
   importRecords: (json: string, mode: ImportMode) => void
   setReadingBookTotalPages: (title: string, totalPages: number) => void
+  updateReadingLogPages: (date: string, sessionId: string, startPage: number, endPage: number) => boolean
+  deleteReadingLog: (date: string, sessionId: string) => boolean
+  deleteReadingBook: (title: string, deleteHistory: boolean) => void
 }
 
 const RecordsContext = createContext<RecordsContextValue | null>(null)
@@ -77,6 +81,55 @@ export function RecordsProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const updateReadingLogPages = useCallback((date: string, sessionId: string, startPage: number, endPage: number) => {
+    let updated = false
+    setRecords((previous) => {
+      const next = previous.map((record) => {
+        if (record.date !== date) return record
+        const changed = updateReadingSessionPages(record, sessionId, startPage, endPage)
+        if (!changed) return record
+        updated = true
+        return changed
+      })
+      if (updated) saveRecords(next)
+      return updated ? next : previous
+    })
+    return updated
+  }, [])
+
+  const deleteReadingLog = useCallback((date: string, sessionId: string) => {
+    let deleted = false
+    setRecords((previous) => {
+      const next = previous.flatMap((record) => {
+        if (record.date !== date || !(record.readingLogs ?? []).some((entry) => entry.id === sessionId)) return [record]
+        deleted = true
+        const changed = removeReadingSessions(record, (entry) => entry.id === sessionId)
+        return changed ? [changed] : []
+      })
+      if (deleted) saveRecords(next)
+      return deleted ? next : previous
+    })
+    return deleted
+  }, [])
+
+  const deleteReadingBook = useCallback((title: string, deleteHistory: boolean) => {
+    const key = title.trim().toLocaleLowerCase()
+    setReadingBooks((previous) => {
+      const next = previous.filter((book) => book.title.toLocaleLowerCase() !== key)
+      saveReadingBooks(next)
+      return next
+    })
+    if (!deleteHistory) return
+    setRecords((previous) => {
+      const next = previous.flatMap((record) => {
+        const changed = removeReadingSessions(record, (entry) => entry.bookTitle.trim().toLocaleLowerCase() === key)
+        return changed ? [changed] : []
+      })
+      saveRecords(next)
+      return next
+    })
+  }, [])
+
   const exportRecords = useCallback(() => {
     setRecords((prev) => {
       downloadRecords(prev, categories, readingBooks)
@@ -114,8 +167,11 @@ export function RecordsProvider({ children }: { children: ReactNode }) {
       exportRecords,
       importRecords,
       setReadingBookTotalPages,
+      updateReadingLogPages,
+      deleteReadingLog,
+      deleteReadingBook,
     }),
-    [records, readingBooks, upsertRecord, deleteRecord, getRecord, refresh, exportRecords, importRecords, setReadingBookTotalPages],
+    [records, readingBooks, upsertRecord, deleteRecord, getRecord, refresh, exportRecords, importRecords, setReadingBookTotalPages, updateReadingLogPages, deleteReadingLog, deleteReadingBook],
   )
 
   return <RecordsContext.Provider value={value}>{children}</RecordsContext.Provider>
