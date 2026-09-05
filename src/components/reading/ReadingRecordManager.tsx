@@ -14,7 +14,7 @@ interface ReadingRecordManagerProps {
   bookTitle: string
   totalPages: number
   sessions: ReadingSessionData[]
-  bookTimerActive: boolean
+  bookActionLocked: boolean
   defaultExpanded?: boolean
   onUpdateSession: (session: ReadingSessionData, startPage: number, endPage: number) => void
   onDeleteSession: (session: ReadingSessionData) => void
@@ -25,7 +25,7 @@ export function ReadingRecordManager({
   bookTitle,
   totalPages,
   sessions,
-  bookTimerActive,
+  bookActionLocked,
   defaultExpanded = false,
   onUpdateSession,
   onDeleteSession,
@@ -43,7 +43,14 @@ export function ReadingRecordManager({
   useEffect(() => {
     if (!action) return
     const frame = requestAnimationFrame(() => firstButtonRef.current?.focus({ preventScroll: true }))
-    return () => cancelAnimationFrame(frame)
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setAction(null)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      cancelAnimationFrame(frame)
+      document.removeEventListener('keydown', onKeyDown)
+    }
   }, [action])
 
   const openEdit = (session: ReadingSessionData) => {
@@ -58,24 +65,26 @@ export function ReadingRecordManager({
 
   return <>
     <section className="calico-surface stitched-light overflow-hidden rounded-[14px]" aria-labelledby="reading-record-manager-title">
-      <button type="button" onClick={() => setExpanded((value) => !value)} className="flex min-h-16 w-full items-center justify-between gap-3 px-4 text-left">
-        <span className="min-w-0"><span id="reading-record-manager-title" className="block text-base font-extrabold text-terracotta">阅读记录管理</span><span className="mt-0.5 block text-xs text-stone-light">{sessions.length} 次记录 · 可调整页码或删除</span></span>
+      <button type="button" aria-expanded={expanded} aria-controls="reading-record-list" onClick={() => setExpanded((value) => !value)} className="flex min-h-16 w-full items-center justify-between gap-3 px-4 text-left active:bg-terracotta/5">
+        <span className="min-w-0"><span id="reading-record-manager-title" className="block text-base font-extrabold text-terracotta">阅读记录</span><span className="mt-0.5 block text-xs text-stone-light">{sessions.length} 次 · 修改页码或移除错误记录</span></span>
         <svg className={`shrink-0 text-terracotta transition-transform ${expanded ? 'rotate-180' : ''}`} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="m6 9 6 6 6-6" /></svg>
       </button>
 
-      {expanded && <div className="border-t border-dashed border-terracotta/25 px-3 pb-3 pt-3">
+      {expanded && <div id="reading-record-list" className="reading-disclosure-enter border-t border-dashed border-terracotta/25 px-3 pb-3 pt-3">
         {sessions.length ? <ol className="space-y-2">
-          {visibleSessions.map((session) => <li key={session.id} className="rounded-[10px] border border-terracotta/20 bg-cream p-3">
-            <div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><p className="text-sm font-extrabold text-terracotta">{formatDisplayDate(session.date)}</p><p className="mt-1 text-xs font-bold text-stone-light">{session.startPage ?? '—'} – {session.endPage ?? '—'} 页 · {formatMinutes(session.minutes)}</p></div><div className="flex shrink-0 gap-1"><button type="button" onClick={() => openEdit(session)} className="min-h-11 rounded-[8px] px-3 text-xs font-extrabold text-terracotta active:bg-cream-dark">调整页码</button><button type="button" onClick={() => setAction({ kind: 'delete-session', session })} className="min-h-11 rounded-[8px] px-3 text-xs font-extrabold text-[#9d393f] active:bg-[#fff1ed]">删除</button></div></div>
+          {visibleSessions.map((session, index) => <li key={session.id} className="relative rounded-[10px] bg-cream px-3 py-3 pl-5">
+            <span className="absolute left-2 top-5 h-2 w-2 rounded-full bg-[#276ef1]" aria-hidden />
+            {index < visibleSessions.length - 1 && <span className="absolute bottom-[-0.75rem] left-[0.6875rem] top-7 w-px bg-terracotta/18" aria-hidden />}
+            <div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><p className="text-sm font-extrabold text-terracotta">{formatDisplayDate(session.date)}</p><p className="depot-display mt-0.5 text-lg font-extrabold tabular-nums text-depot-ink">{session.startPage ?? '—'}–{session.endPage ?? '—'} 页</p><p className="mt-0.5 text-xs font-bold text-stone-light">本次阅读 {formatMinutes(session.minutes)}</p></div><div className="flex shrink-0 flex-col gap-1 sm:flex-row"><button type="button" onClick={() => openEdit(session)} className="min-h-10 rounded-[8px] px-3 text-xs font-extrabold text-terracotta active:bg-cream-dark">修改</button><button type="button" onClick={() => setAction({ kind: 'delete-session', session })} className="min-h-10 rounded-[8px] px-3 text-xs font-extrabold text-[#9d393f] active:bg-[#fff1ed]">删除</button></div></div>
           </li>)}
         </ol> : <p className="rounded-[10px] bg-cream px-4 py-5 text-center text-sm font-bold text-stone-light">这本书还没有阅读记录</p>}
         {visibleCount < sessions.length && <button type="button" onClick={() => setVisibleCount((count) => count + 10)} className="mt-2 min-h-11 w-full text-sm font-bold text-terracotta">再显示 {Math.min(10, sessions.length - visibleCount)} 条</button>}
-        <button type="button" onClick={() => setAction({ kind: 'delete-book' })} disabled={bookTimerActive} className="mt-3 min-h-12 w-full rounded-[10px] border border-[#9d393f]/35 text-sm font-extrabold text-[#9d393f] disabled:opacity-40">{bookTimerActive ? '计时中无法删除本书' : '从书架删除这本书'}</button>
+        <div className="mt-4 border-t border-dashed border-[#9d393f]/25 pt-3"><p className="mb-2 text-xs leading-5 text-stone-light">删除书籍前会再次确认，可选择是否同时清除历史。</p><button type="button" onClick={() => setAction({ kind: 'delete-book' })} disabled={bookActionLocked} className="min-h-12 w-full rounded-[10px] border border-[#9d393f]/35 text-sm font-extrabold text-[#9d393f] active:bg-[#fff1ed] disabled:opacity-40">{bookActionLocked ? '完成当前阅读后才能删除' : '删除这本书'}</button></div>
       </div>}
     </section>
 
-    {action && createPortal(<div className="fixed inset-0 z-[150] flex items-end justify-center bg-depot-deep/75 sm:items-center" role="presentation">
-      <section role="dialog" aria-modal="true" aria-labelledby="reading-manager-dialog-title" data-scroll-lock-allow className="calico-surface w-full max-w-md rounded-t-[20px] border border-terracotta/25 p-5 shadow-[0_-16px_42px_rgba(8,43,34,0.28)] sm:rounded-[18px]" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
+    {action && createPortal(<div className="reading-sheet-backdrop fixed inset-0 z-[150] flex items-end justify-center bg-depot-deep/75 sm:items-center" onPointerDown={(event) => { if (event.target === event.currentTarget) setAction(null) }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="reading-manager-dialog-title" data-scroll-lock-allow className="reading-sheet calico-surface max-h-[88svh] w-full max-w-md overflow-y-auto rounded-t-[20px] border border-terracotta/25 p-5 shadow-[0_-16px_42px_rgba(8,43,34,0.28)] sm:rounded-[18px]" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
         {action.kind === 'edit' ? <form onSubmit={(event) => { event.preventDefault(); if (!validPages) return; onUpdateSession(action.session, startPage, endPage); setAction(null) }}>
           <h2 id="reading-manager-dialog-title" className="text-xl font-extrabold text-terracotta">调整本次页码</h2>
           <p className="mt-1 text-xs leading-5 text-stone-light">{formatDisplayDate(action.session.date)} · 不会改变本次计时</p>

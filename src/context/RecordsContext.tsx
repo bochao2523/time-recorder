@@ -34,6 +34,7 @@ interface RecordsContextValue {
   exportRecords: () => void
   importRecords: (json: string, mode: ImportMode) => void
   setReadingBookTotalPages: (title: string, totalPages: number) => void
+  renameReadingBook: (oldTitle: string, newTitle: string) => boolean
   updateReadingLogPages: (date: string, sessionId: string, startPage: number, endPage: number) => boolean
   deleteReadingLog: (date: string, sessionId: string) => boolean
   deleteReadingBook: (title: string, deleteHistory: boolean) => void
@@ -80,6 +81,40 @@ export function RecordsProvider({ children }: { children: ReactNode }) {
       return next
     })
   }, [])
+
+  const renameReadingBook = useCallback((oldTitle: string, newTitle: string) => {
+    const oldKey = oldTitle.trim().toLocaleLowerCase()
+    const normalizedTitle = newTitle.trim()
+    const newKey = normalizedTitle.toLocaleLowerCase()
+    if (!oldKey || !newKey) return false
+    const source = readingBooks.find((book) => book.title.toLocaleLowerCase() === oldKey)
+    const duplicate = readingBooks.some((book) => book.title.toLocaleLowerCase() === newKey && book.title.toLocaleLowerCase() !== oldKey)
+    if (!source || duplicate) return false
+
+    setReadingBooks((previous) => {
+      const next = previous.map((book) => book.title.toLocaleLowerCase() === oldKey
+        ? { ...book, title: normalizedTitle, updatedAt: new Date().toISOString() }
+        : book)
+      saveReadingBooks(next)
+      return next
+    })
+    setRecords((previous) => {
+      let changed = false
+      const next = previous.map((record) => {
+        if (!(record.readingLogs ?? []).some((entry) => entry.bookTitle.trim().toLocaleLowerCase() === oldKey)) return record
+        changed = true
+        return {
+          ...record,
+          readingLogs: record.readingLogs?.map((entry) => entry.bookTitle.trim().toLocaleLowerCase() === oldKey
+            ? { ...entry, bookTitle: normalizedTitle }
+            : entry),
+        }
+      })
+      if (changed) saveRecords(next)
+      return changed ? next : previous
+    })
+    return true
+  }, [readingBooks])
 
   const updateReadingLogPages = useCallback((date: string, sessionId: string, startPage: number, endPage: number) => {
     let updated = false
@@ -167,11 +202,12 @@ export function RecordsProvider({ children }: { children: ReactNode }) {
       exportRecords,
       importRecords,
       setReadingBookTotalPages,
+      renameReadingBook,
       updateReadingLogPages,
       deleteReadingLog,
       deleteReadingBook,
     }),
-    [records, readingBooks, upsertRecord, deleteRecord, getRecord, refresh, exportRecords, importRecords, setReadingBookTotalPages, updateReadingLogPages, deleteReadingLog, deleteReadingBook],
+    [records, readingBooks, upsertRecord, deleteRecord, getRecord, refresh, exportRecords, importRecords, setReadingBookTotalPages, renameReadingBook, updateReadingLogPages, deleteReadingLog, deleteReadingBook],
   )
 
   return <RecordsContext.Provider value={value}>{children}</RecordsContext.Provider>
