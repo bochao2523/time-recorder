@@ -10,13 +10,6 @@ interface BodyScrollLockOptions {
 }
 
 interface ScrollSnapshot {
-  scrollY: number
-  bodyPosition: string
-  bodyTop: string
-  bodyLeft: string
-  bodyRight: string
-  bodyWidth: string
-  bodyHeight: string
   bodyOverflow: string
   bodyTouchAction: string
   htmlOverflow: string
@@ -87,13 +80,6 @@ function acquireScrollLock(): () => void {
   if (scrollLockCount === 1) {
     const { body, documentElement } = document
     scrollSnapshot = {
-      scrollY: window.scrollY,
-      bodyPosition: body.style.position,
-      bodyTop: body.style.top,
-      bodyLeft: body.style.left,
-      bodyRight: body.style.right,
-      bodyWidth: body.style.width,
-      bodyHeight: body.style.height,
       bodyOverflow: body.style.overflow,
       bodyTouchAction: body.style.touchAction,
       htmlOverflow: documentElement.style.overflow,
@@ -104,12 +90,6 @@ function acquireScrollLock(): () => void {
     body.classList.add(LOCK_CLASS)
     documentElement.classList.add(LOCK_CLASS)
     documentElement.dataset[LOCK_MARKER] = 'true'
-    body.style.position = 'fixed'
-    body.style.top = `-${scrollSnapshot.scrollY}px`
-    body.style.left = '0'
-    body.style.right = '0'
-    body.style.width = '100%'
-    body.style.height = '100%'
     body.style.overflow = 'hidden'
     body.style.touchAction = 'none'
     documentElement.style.overflow = 'hidden'
@@ -139,18 +119,11 @@ function acquireScrollLock(): () => void {
     delete documentElement.dataset[LOCK_MARKER]
 
     if (!snapshot) return
-    body.style.position = snapshot.bodyPosition
-    body.style.top = snapshot.bodyTop
-    body.style.left = snapshot.bodyLeft
-    body.style.right = snapshot.bodyRight
-    body.style.width = snapshot.bodyWidth
-    body.style.height = snapshot.bodyHeight
     body.style.overflow = snapshot.bodyOverflow
     body.style.touchAction = snapshot.bodyTouchAction
     documentElement.style.overflow = snapshot.htmlOverflow
     documentElement.style.overscrollBehavior = snapshot.htmlOverscroll
     documentElement.style.height = snapshot.htmlHeight
-    window.scrollTo(0, snapshot.scrollY)
   }
 }
 

@@ -256,14 +256,7 @@ html.scroll-locked body {
   touch-action: none;
 }
 
-html.scroll-locked #root {
-  pointer-events: none;
-  touch-action: none;
-  overflow: hidden;
-}
-
 html.scroll-locked [data-scroll-lock-allow] {
-  pointer-events: auto;
   touch-action: pan-y;
 }
 

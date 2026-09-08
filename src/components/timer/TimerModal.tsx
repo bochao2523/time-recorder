@@ -64,14 +64,15 @@ export function TimerModal() {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center"
+      className="fixed inset-0 z-[100] isolate flex min-h-[100dvh] items-end justify-center sm:items-center"
       role="presentation"
     >
       <button
         type="button"
         aria-label="关闭计时器"
         tabIndex={-1}
-        className="absolute inset-0 touch-none bg-depot-deep/65"
+        className="absolute inset-0 bg-depot-deep/65"
+        onPointerDown={closeModal}
         onClick={closeModal}
       />
 
@@ -81,9 +82,9 @@ export function TimerModal() {
         aria-modal="true"
         aria-labelledby="timer-modal-title"
         data-scroll-lock-allow
-        className="calico-surface relative z-10 flex max-h-[min(92svh,100%)] w-full max-w-md flex-col overflow-hidden rounded-t-[20px] border border-terracotta/30 shadow-[0_-16px_42px_rgba(8,43,34,0.28)] sm:max-h-[85svh] sm:rounded-[18px]"
+        className="calico-surface relative flex min-h-48 max-h-[calc(100dvh-env(safe-area-inset-top,0px))] w-full max-w-md flex-col overflow-hidden rounded-t-[20px] border border-terracotta/30 shadow-[0_-16px_42px_rgba(8,43,34,0.28)] sm:max-h-[85dvh] sm:rounded-[18px]"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
       >
         <div className="flex shrink-0 justify-center pt-2 sm:hidden" aria-hidden>
           <span className="h-1 w-10 rounded-full bg-terracotta/35" />
