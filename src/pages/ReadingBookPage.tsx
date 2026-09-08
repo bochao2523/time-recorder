@@ -48,7 +48,7 @@ function BookEditSheet({
   const [titleInput, setTitleInput] = useState(bookTitle)
   const [pagesInput, setPagesInput] = useState(String(totalPages))
   const titleRef = useRef<HTMLInputElement>(null)
-  useBodyScrollLock(open)
+  useBodyScrollLock(open, { inertRoot: true, hideRootFromScreenReaders: true })
 
   useEffect(() => {
     if (!open) return

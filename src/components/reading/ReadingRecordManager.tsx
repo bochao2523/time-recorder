@@ -38,7 +38,7 @@ export function ReadingRecordManager({
   const [endInput, setEndInput] = useState('')
   const [deleteHistory, setDeleteHistory] = useState(false)
   const firstButtonRef = useRef<HTMLButtonElement>(null)
-  useBodyScrollLock(Boolean(action))
+  useBodyScrollLock(Boolean(action), { inertRoot: true, hideRootFromScreenReaders: true })
 
   useEffect(() => {
     if (!action) return

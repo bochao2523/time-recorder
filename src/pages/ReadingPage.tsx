@@ -24,11 +24,22 @@ export function ReadingPage() {
   const [pagesInput, setPagesInput] = useState('')
 
   const readingSessions = useMemo(() => collectReadingSessions(records), [records])
+  const sessionsByBook = useMemo(() => {
+    const grouped = new Map<string, typeof readingSessions>()
+    for (const session of readingSessions) {
+      const key = session.bookTitle.toLocaleLowerCase()
+      const entries = grouped.get(key)
+      if (entries) entries.push(session)
+      else grouped.set(key, [session])
+    }
+    return grouped
+  }, [readingSessions])
   const books = useMemo<BookView[]>(() => readingBooks.map((meta) => {
-    const insights = buildReadingBookInsights(readingSessions, meta.title, meta.totalPages)
+    const bookSessions = sessionsByBook.get(meta.title.toLocaleLowerCase()) ?? []
+    const insights = buildReadingBookInsights(bookSessions, meta.title, meta.totalPages)
     const lastReadAt = insights.sessions[0]?.completedAt ?? insights.sessions[0]?.date ?? meta.updatedAt
     return { meta, insights, finished: insights.currentPage >= meta.totalPages, lastReadAt }
-  }).sort((a, b) => Number(a.finished) - Number(b.finished) || b.lastReadAt.localeCompare(a.lastReadAt)), [readingBooks, readingSessions])
+  }).sort((a, b) => Number(a.finished) - Number(b.finished) || b.lastReadAt.localeCompare(a.lastReadAt)), [readingBooks, sessionsByBook])
   const activeBooks = books.filter((book) => !book.finished)
   const finishedBooks = books.filter((book) => book.finished)
   const displayedFinishedBooks = showAllFinished ? finishedBooks : finishedBooks.slice(0, 3)

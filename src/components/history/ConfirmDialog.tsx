@@ -18,7 +18,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  useBodyScrollLock(open)
+  useBodyScrollLock(open, { inertRoot: true, hideRootFromScreenReaders: true })
 
   if (!open) return null
 

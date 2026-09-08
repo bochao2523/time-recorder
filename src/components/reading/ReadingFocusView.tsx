@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 import { useRecords } from '../../context/RecordsContext'
 import { useTimer } from '../../context/TimerContext'
@@ -11,7 +11,10 @@ export function ReadingFocusView() {
   const { records, readingBooks } = useRecords()
   const { sessions, now, pendingReadingCompletion, pause, resume, stop } = useTimer()
   const timer = sessions.find((item) => item.completionKind === 'reading') ?? null
-  useBodyScrollLock(Boolean(timer && !pendingReadingCompletion))
+  useBodyScrollLock(Boolean(timer && !pendingReadingCompletion), {
+    inertRoot: true,
+    hideRootFromScreenReaders: true,
+  })
 
   const book = timer
     ? readingBooks.find((item) => item.title.toLocaleLowerCase() === timer.taskName.toLocaleLowerCase())
@@ -19,13 +22,6 @@ export function ReadingFocusView() {
   const insights = useMemo(() => timer
     ? buildReadingBookInsights(collectReadingSessions(records), timer.taskName, book?.totalPages)
     : null, [book?.totalPages, records, timer])
-
-  useEffect(() => {
-    if (!timer || pendingReadingCompletion) return
-    const root = document.getElementById('root')
-    root?.setAttribute('inert', '')
-    return () => root?.removeAttribute('inert')
-  }, [pendingReadingCompletion, timer])
 
   if (!timer || pendingReadingCompletion) return null
   const paused = timer.status === 'paused'

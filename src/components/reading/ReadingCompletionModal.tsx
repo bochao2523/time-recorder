@@ -19,7 +19,10 @@ export function ReadingCompletionModal() {
   const [finished, setFinished] = useState(false)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  useBodyScrollLock(Boolean(pendingReadingCompletion))
+  useBodyScrollLock(Boolean(pendingReadingCompletion), {
+    inertRoot: true,
+    hideRootFromScreenReaders: true,
+  })
 
   const book = pendingReadingCompletion
     ? readingBooks.find((item) => item.title.toLocaleLowerCase() === pendingReadingCompletion.bookTitle.toLocaleLowerCase())
@@ -39,13 +42,6 @@ export function ReadingCompletionModal() {
     setConfirmDiscard(false)
     const frame = requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
     return () => cancelAnimationFrame(frame)
-  }, [pendingReadingCompletion])
-
-  useEffect(() => {
-    if (!pendingReadingCompletion) return
-    const root = document.getElementById('root')
-    root?.setAttribute('inert', '')
-    return () => root?.removeAttribute('inert')
   }, [pendingReadingCompletion])
 
   if (!pendingReadingCompletion) return null

@@ -10,20 +10,16 @@ export function TimerModal() {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const lastFocusedRef = useRef<HTMLElement | null>(null)
 
-  useBodyScrollLock(modalOpen)
+  useBodyScrollLock(modalOpen, {
+    inertRoot: true,
+    hideRootFromScreenReaders: true,
+  })
 
   useEffect(() => {
     if (!modalOpen) return
-    const appRoot = document.getElementById('root')
-    const previousAriaHidden = appRoot?.getAttribute('aria-hidden')
     lastFocusedRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null
-
-    if (appRoot) {
-      appRoot.setAttribute('inert', '')
-      appRoot.setAttribute('aria-hidden', 'true')
-    }
 
     const focusFrame = window.requestAnimationFrame(() => {
       closeButtonRef.current?.focus({ preventScroll: true })
@@ -58,11 +54,6 @@ export function TimerModal() {
     return () => {
       window.cancelAnimationFrame(focusFrame)
       window.removeEventListener('keydown', onKey)
-      if (appRoot) {
-        appRoot.removeAttribute('inert')
-        if (previousAriaHidden == null) appRoot.removeAttribute('aria-hidden')
-        else appRoot.setAttribute('aria-hidden', previousAriaHidden)
-      }
       window.requestAnimationFrame(() => {
         lastFocusedRef.current?.focus({ preventScroll: true })
       })
