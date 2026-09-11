@@ -4,6 +4,8 @@ import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 import { formatDisplayDate, formatMinutes } from '../../lib/dateUtils'
 import type { ReadingSessionData } from '../../lib/readingInsights'
 
+const RECORDS_PER_PAGE = 12
+
 type ManagerAction =
   | { kind: 'edit'; session: ReadingSessionData }
   | { kind: 'delete-session'; session: ReadingSessionData }
@@ -32,7 +34,7 @@ export function ReadingRecordManager({
   onDeleteBook,
 }: ReadingRecordManagerProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
-  const [visibleCount, setVisibleCount] = useState(6)
+  const [page, setPage] = useState(0)
   const [action, setAction] = useState<ManagerAction>(null)
   const [startInput, setStartInput] = useState('')
   const [endInput, setEndInput] = useState('')
@@ -61,7 +63,14 @@ export function ReadingRecordManager({
   const startPage = Number(startInput)
   const endPage = Number(endInput)
   const validPages = Number.isInteger(startPage) && startPage >= 1 && Number.isInteger(endPage) && endPage >= startPage && endPage <= totalPages
-  const visibleSessions = sessions.slice(0, visibleCount)
+  const pageCount = Math.max(1, Math.ceil(sessions.length / RECORDS_PER_PAGE))
+  const currentPage = Math.min(page, pageCount - 1)
+  const pageStart = currentPage * RECORDS_PER_PAGE
+  const visibleSessions = sessions.slice(pageStart, pageStart + RECORDS_PER_PAGE)
+
+  useEffect(() => {
+    if (page >= pageCount) setPage(pageCount - 1)
+  }, [page, pageCount])
 
   return <>
     <section className="calico-surface stitched-light overflow-hidden rounded-[14px]" aria-labelledby="reading-record-manager-title">
@@ -78,7 +87,11 @@ export function ReadingRecordManager({
             <div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><p className="text-sm font-extrabold text-terracotta">{formatDisplayDate(session.date)}</p><p className="depot-display mt-0.5 text-lg font-extrabold tabular-nums text-depot-ink">{session.startPage ?? '—'}–{session.endPage ?? '—'} 页</p><p className="mt-0.5 text-xs font-bold text-stone-light">本次阅读 {formatMinutes(session.minutes)}</p></div><div className="flex shrink-0 flex-col gap-1 sm:flex-row"><button type="button" onClick={() => openEdit(session)} className="min-h-10 rounded-[8px] px-3 text-xs font-extrabold text-terracotta active:bg-cream-dark">修改</button><button type="button" onClick={() => setAction({ kind: 'delete-session', session })} className="min-h-10 rounded-[8px] px-3 text-xs font-extrabold text-[#9d393f] active:bg-[#fff1ed]">删除</button></div></div>
           </li>)}
         </ol> : <p className="rounded-[10px] bg-cream px-4 py-5 text-center text-sm font-bold text-stone-light">这本书还没有阅读记录</p>}
-        {visibleCount < sessions.length && <button type="button" onClick={() => setVisibleCount((count) => count + 10)} className="mt-2 min-h-11 w-full text-sm font-bold text-terracotta">再显示 {Math.min(10, sessions.length - visibleCount)} 条</button>}
+        {pageCount > 1 && <nav aria-label="阅读记录分页" className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-[10px] bg-cream px-2 py-2">
+          <button type="button" disabled={currentPage === 0} onClick={() => setPage((value) => Math.max(0, value - 1))} className="min-h-11 rounded-[8px] px-3 text-sm font-extrabold text-terracotta active:bg-cream-dark disabled:text-stone-light disabled:opacity-45">上一页</button>
+          <span aria-live="polite" className="whitespace-nowrap px-1 text-center text-xs font-bold tabular-nums text-stone-light">第 {currentPage + 1} / {pageCount} 页</span>
+          <button type="button" disabled={currentPage === pageCount - 1} onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))} className="min-h-11 rounded-[8px] px-3 text-sm font-extrabold text-terracotta active:bg-cream-dark disabled:text-stone-light disabled:opacity-45">下一页</button>
+        </nav>}
         <div className="mt-4 border-t border-dashed border-[#9d393f]/25 pt-3"><p className="mb-2 text-xs leading-5 text-stone-light">删除书籍前会再次确认，可选择是否同时清除历史。</p><button type="button" onClick={() => setAction({ kind: 'delete-book' })} disabled={bookActionLocked} className="min-h-12 w-full rounded-[10px] border border-[#9d393f]/35 text-sm font-extrabold text-[#9d393f] active:bg-[#fff1ed] disabled:opacity-40">{bookActionLocked ? '完成当前阅读后才能删除' : '删除这本书'}</button></div>
       </div>}
     </section>
