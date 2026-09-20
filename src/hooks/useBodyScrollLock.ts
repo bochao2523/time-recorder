@@ -11,7 +11,6 @@ interface BodyScrollLockOptions {
 
 interface ScrollSnapshot {
   bodyOverflow: string
-  bodyTouchAction: string
   htmlOverflow: string
   htmlOverscroll: string
   htmlHeight: string
@@ -104,7 +103,6 @@ function acquireScrollLock(): () => void {
     const { body, documentElement } = document
     scrollSnapshot = {
       bodyOverflow: body.style.overflow,
-      bodyTouchAction: body.style.touchAction,
       htmlOverflow: documentElement.style.overflow,
       htmlOverscroll: documentElement.style.overscrollBehavior,
       htmlHeight: documentElement.style.height,
@@ -114,7 +112,6 @@ function acquireScrollLock(): () => void {
     documentElement.classList.add(LOCK_CLASS)
     documentElement.dataset[LOCK_MARKER] = 'true'
     body.style.overflow = 'hidden'
-    body.style.touchAction = 'none'
     documentElement.style.overflow = 'hidden'
     documentElement.style.height = '100%'
     documentElement.style.overscrollBehavior = 'none'
@@ -143,7 +140,6 @@ function acquireScrollLock(): () => void {
 
     if (!snapshot) return
     body.style.overflow = snapshot.bodyOverflow
-    body.style.touchAction = snapshot.bodyTouchAction
     documentElement.style.overflow = snapshot.htmlOverflow
     documentElement.style.overscrollBehavior = snapshot.htmlOverscroll
     documentElement.style.height = snapshot.htmlHeight

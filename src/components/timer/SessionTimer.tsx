@@ -295,7 +295,7 @@ export function SessionTimer({ onFinished }: SessionTimerProps) {
                 <p className="text-xs text-stone-light">点一下填入</p>
               </div>
               <div
-                className="-mx-1 mt-2 flex max-w-full gap-2 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="horizontal-scroll-region -mx-1 mt-2 flex max-w-full gap-2 overflow-x-auto overflow-y-hidden px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 aria-label={`${categoryDefinition.label}常用任务`}
               >
                 {rememberedTaskNames.map((name) => {
