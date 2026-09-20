@@ -257,7 +257,7 @@ html.scroll-locked body {
 }
 
 html.scroll-locked [data-scroll-lock-allow] {
-  touch-action: pan-y;
+  touch-action: pan-x pan-y;
 }
 
 /* iOS Safari：输入框字号 < 16px 时会自动放大页面，移动端统一设为 16px */
@@ -291,5 +291,5 @@ html.scroll-locked [data-scroll-lock-allow] {
 .scroll-region {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: none;
-  touch-action: pan-y;
+  touch-action: pan-x pan-y;
 }

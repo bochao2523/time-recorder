@@ -23,16 +23,33 @@ let rootAriaHiddenCount = 0
 let scrollSnapshot: ScrollSnapshot | null = null
 let previousRootInert = false
 let previousRootAriaHidden: string | null = null
+let lastTouchX = 0
 let lastTouchY = 0
 
-function canElementScroll(el: HTMLElement, deltaY: number): boolean {
+function canElementScroll(el: HTMLElement, deltaX: number, deltaY: number): boolean {
   const style = window.getComputedStyle(el)
+  const horizontalGesture = Math.abs(deltaX) > Math.abs(deltaY)
+
+  if (horizontalGesture) {
+    const overflowX = style.overflowX
+    const scrollableX =
+      (overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'overlay') &&
+      el.scrollWidth > el.clientWidth + 1
+
+    if (!scrollableX) return false
+
+    const maxScrollLeft = el.scrollWidth - el.clientWidth
+    if (deltaX > 0) return el.scrollLeft < maxScrollLeft - 1
+    if (deltaX < 0) return el.scrollLeft > 1
+    return true
+  }
+
   const overflowY = style.overflowY
-  const scrollable =
+  const scrollableY =
     (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
     el.scrollHeight > el.clientHeight + 1
 
-  if (!scrollable) return false
+  if (!scrollableY) return false
 
   const { scrollTop, scrollHeight, clientHeight } = el
   const maxScroll = scrollHeight - clientHeight
@@ -41,7 +58,7 @@ function canElementScroll(el: HTMLElement, deltaY: number): boolean {
   return true
 }
 
-function allowTouchScroll(target: EventTarget | null, deltaY: number): boolean {
+function allowTouchScroll(target: EventTarget | null, deltaX: number, deltaY: number): boolean {
   if (!(target instanceof Element)) return false
 
   const allowRoot = target.closest('[data-scroll-lock-allow]')
@@ -49,7 +66,7 @@ function allowTouchScroll(target: EventTarget | null, deltaY: number): boolean {
 
   let node: HTMLElement | null = target instanceof HTMLElement ? target : target.parentElement
   while (node && allowRoot.contains(node)) {
-    if (canElementScroll(node, deltaY)) return true
+    if (canElementScroll(node, deltaX, deltaY)) return true
     if (node === allowRoot) break
     node = node.parentElement
   }
@@ -57,7 +74,10 @@ function allowTouchScroll(target: EventTarget | null, deltaY: number): boolean {
 }
 
 function onTouchStart(event: TouchEvent) {
-  if (event.touches.length === 1) lastTouchY = event.touches[0].clientY
+  if (event.touches.length === 1) {
+    lastTouchX = event.touches[0].clientX
+    lastTouchY = event.touches[0].clientY
+  }
 }
 
 function onTouchMove(event: TouchEvent) {
@@ -65,14 +85,17 @@ function onTouchMove(event: TouchEvent) {
     event.preventDefault()
     return
   }
+  const currentX = event.touches[0].clientX
   const currentY = event.touches[0].clientY
+  const deltaX = lastTouchX - currentX
   const deltaY = lastTouchY - currentY
+  lastTouchX = currentX
   lastTouchY = currentY
-  if (!allowTouchScroll(event.target, deltaY)) event.preventDefault()
+  if (!allowTouchScroll(event.target, deltaX, deltaY)) event.preventDefault()
 }
 
 function onWheel(event: WheelEvent) {
-  if (!allowTouchScroll(event.target, event.deltaY)) event.preventDefault()
+  if (!allowTouchScroll(event.target, event.deltaX, event.deltaY)) event.preventDefault()
 }
 
 function acquireScrollLock(): () => void {
