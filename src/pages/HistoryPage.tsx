@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TimeRangePicker } from '../components/common/TimeRangePicker'
+import dayjs from 'dayjs'
 import { MonthCalendarGrid } from '../components/history/MonthCalendarGrid'
 import { HistoryTable } from '../components/history/HistoryTable'
 import { ConfirmDialog } from '../components/history/ConfirmDialog'
@@ -12,7 +12,7 @@ import {
   getDailyAverage,
   getRangeTotalMinutes,
 } from '../lib/stats'
-import { today } from '../lib/dateUtils'
+import { DATE_FORMAT, today } from '../lib/dateUtils'
 
 /** 历史页统一卡片容器 */
 function HistoryCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -33,11 +33,11 @@ function parseStatDisplay(totalMinutes: number): { value: string; unit: string }
 function HistoryStatCard({ label, value, unit, accent }: { label: string; value: string; unit: string; accent?: boolean }) {
   return (
     <div className="min-w-0 px-2 py-1 text-center">
-      <p className="truncate text-[11px] font-bold text-chrome-yellow/70">{label}</p>
+      <p className="truncate text-xs font-bold text-chrome-yellow/70">{label}</p>
       <p className={`depot-display mt-1 font-extrabold tracking-tight ${accent ? 'text-chrome-yellow' : 'text-chrome-yellow'}`}>
         <span className="text-2xl">{value}</span>
       </p>
-      <p className="mt-0.5 truncate text-[11px] text-chrome-yellow/70">{unit}</p>
+      <p className="mt-0.5 truncate text-xs text-chrome-yellow/70">{unit}</p>
     </div>
   )
 }
@@ -45,15 +45,25 @@ function HistoryStatCard({ label, value, unit, accent }: { label: string; value:
 export function HistoryPage() {
   const navigate = useNavigate()
   const { records, deleteRecord } = useRecords()
-  const [range, setRange] = useState<TimeRange>({ preset: 'today', end: today() })
+  const [viewMonth, setViewMonth] = useState(() => dayjs().startOf('month').format(DATE_FORMAT))
   const [deleteDate, setDeleteDate] = useState<string | null>(null)
   const [highlightDate, setHighlightDate] = useState<string | null>(null)
+
+  const range = useMemo<TimeRange>(() => {
+    const month = dayjs(viewMonth)
+    const monthEnd = month.endOf('month').format(DATE_FORMAT)
+    return {
+      preset: 'custom',
+      start: month.startOf('month').format(DATE_FORMAT),
+      end: monthEnd > today() ? today() : monthEnd,
+    }
+  }, [viewMonth])
 
   const filtered = useMemo(() => filterByRange(records, range), [records, range])
 
   const totalMinutes = useMemo(() => getRangeTotalMinutes(records, range), [records, range])
   const dailyAvg = useMemo(() => getDailyAverage(records, range), [records, range])
-  const streak = useMemo(() => calcStreak(records), [records])
+  const streak = useMemo(() => calcStreak(records, range.end), [records, range.end])
 
   const totalStat = useMemo(() => parseStatDisplay(totalMinutes), [totalMinutes])
   const avgStat = useMemo(() => parseStatDisplay(dailyAvg), [dailyAvg])
@@ -74,29 +84,33 @@ export function HistoryPage() {
     navigate(`/?date=${date}`)
   }
 
+  const handleMonthChange = (month: string) => {
+    setViewMonth(month)
+    setHighlightDate(null)
+  }
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="depot-cloth stitched-panel grid grid-cols-3 divide-x divide-chrome-yellow/30 rounded-[14px] px-2 py-4 text-chrome-yellow">
-        <HistoryStatCard label="总时间" value={totalStat.value} unit={totalStat.unit} accent />
-        <HistoryStatCard label="日均" value={avgStat.value} unit={avgStat.unit} />
+      <div
+        aria-live="polite"
+        className="depot-cloth stitched-panel grid grid-cols-3 divide-x divide-chrome-yellow/30 rounded-[14px] px-2 py-4 text-chrome-yellow"
+      >
+        <HistoryStatCard label="本月总时间" value={totalStat.value} unit={totalStat.unit} accent />
+        <HistoryStatCard label="本月日均" value={avgStat.value} unit={avgStat.unit} />
         <HistoryStatCard label="连续天数" value={String(streak)} unit="天" />
       </div>
-
-      {/* 时间范围 */}
-      <HistoryCard>
-        <h2 className="mb-3 text-[15px] font-semibold text-stone-800">时间范围</h2>
-        <TimeRangePicker value={range} onChange={setRange} />
-      </HistoryCard>
 
       {/* 按月日历 */}
       <HistoryCard>
         <h2 className="mb-1 text-lg font-bold tracking-tight text-stone-800">日历</h2>
         <p className="mb-4 text-sm text-stone-light">
-          点日期查看记录；没有记录的日期可以直接添加
+          切换月份查看汇总；点日期查看或添加记录
         </p>
         <MonthCalendarGrid
           records={records}
+          viewMonth={viewMonth}
           selectedDate={highlightDate}
+          onMonthChange={handleMonthChange}
           onDayClick={handleCalendarDayClick}
         />
       </HistoryCard>
@@ -105,7 +119,9 @@ export function HistoryPage() {
       <HistoryCard>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold tracking-tight text-stone-800">历史记录</h2>
-          <span className="rounded-full bg-cream px-2.5 py-1 text-xs text-stone-light">{filtered.length} 天</span>
+          <span className="rounded-full bg-cream px-2.5 py-1 text-xs text-stone-light">
+            本月 {filtered.length} 天
+          </span>
         </div>
         <HistoryTable
           records={filtered}

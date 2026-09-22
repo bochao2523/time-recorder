@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import dayjs from 'dayjs'
 import type { DailyRecord } from '../../types'
 import { getTotalMinutes } from '../../lib/stats'
@@ -7,7 +7,9 @@ import { colors } from '../../theme/colors'
 
 interface MonthCalendarGridProps {
   records: DailyRecord[]
+  viewMonth: string
   selectedDate?: string | null
+  onMonthChange: (month: string) => void
   onDayClick: (date: string) => void
 }
 
@@ -47,14 +49,21 @@ function heatCellColor(minutes: number, maxMinutes: number): { bg: string; text:
   }
 }
 
-export function MonthCalendarGrid({ records, selectedDate, onDayClick }: MonthCalendarGridProps) {
+export function MonthCalendarGrid({
+  records,
+  viewMonth,
+  selectedDate,
+  onMonthChange,
+  onDayClick,
+}: MonthCalendarGridProps) {
   const now = dayjs()
-  const [viewYear, setViewYear] = useState(now.year())
-  const [viewMonth, setViewMonth] = useState(now.month())
+  const viewed = dayjs(viewMonth)
+  const viewYear = viewed.year()
+  const viewMonthIndex = viewed.month()
 
   const recordMap = useMemo(() => new Map(records.map((r) => [r.date, r])), [records])
 
-  const cells = useMemo(() => buildMonthGrid(viewYear, viewMonth), [viewYear, viewMonth])
+  const cells = useMemo(() => buildMonthGrid(viewYear, viewMonthIndex), [viewYear, viewMonthIndex])
 
   const monthMaxMinutes = useMemo(() => {
     let max = 0
@@ -69,10 +78,11 @@ export function MonthCalendarGrid({ records, selectedDate, onDayClick }: MonthCa
   const todayStr = today()
 
   const shiftMonth = (delta: number) => {
-    const next = dayjs().year(viewYear).month(viewMonth).add(delta, 'month')
-    setViewYear(next.year())
-    setViewMonth(next.month())
+    const next = viewed.add(delta, 'month').startOf('month')
+    onMonthChange(next.format('YYYY-MM-DD'))
   }
+
+  const isCurrentMonth = viewed.isSame(now, 'month')
 
   const handleCellClick = (date: string) => {
     if (date > todayStr) return
@@ -91,14 +101,15 @@ export function MonthCalendarGrid({ records, selectedDate, onDayClick }: MonthCa
         >
           ‹
         </button>
-        <h3 className="text-[15px] font-semibold text-stone-800">
-          {viewYear}年{viewMonth + 1}月
+        <h3 aria-live="polite" className="text-sm font-semibold text-stone-800">
+          {viewYear}年{viewMonthIndex + 1}月
         </h3>
         <button
           type="button"
           onClick={() => shiftMonth(1)}
+          disabled={isCurrentMonth}
           aria-label="下一月"
-          className="flex h-11 w-11 items-center justify-center rounded-xl text-xl text-stone-800 transition-colors active:bg-white"
+          className="flex h-11 w-11 items-center justify-center rounded-xl text-xl text-stone-800 transition-colors active:bg-white disabled:cursor-default disabled:opacity-30"
         >
           ›
         </button>
