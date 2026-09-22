@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { NavBar } from './NavBar'
 import { TimerFloatingBar } from '../timer/TimerFloatingBar'
 import { TimerHeaderButton } from '../timer/TimerHeaderButton'
@@ -6,9 +7,20 @@ import { TimerModal } from '../timer/TimerModal'
 import { TimerNotice } from '../timer/TimerNotice'
 import { ReadingCompletionModal } from '../reading/ReadingCompletionModal'
 import { ReadingFocusView } from '../reading/ReadingFocusView'
+import { useTimer } from '../../context/TimerContext'
 
 export function Layout() {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
+  const navigate = useNavigate()
+  const { openModal } = useTimer()
+
+  useEffect(() => {
+    const query = new URLSearchParams(search)
+    if (query.get('timer') !== 'open') return
+    openModal()
+    query.delete('timer')
+    navigate({ pathname, search: query.toString() ? `?${query.toString()}` : '' }, { replace: true })
+  }, [navigate, openModal, pathname, search])
   const pageTitle = pathname.startsWith('/history')
     ? '记录'
     : pathname.startsWith('/reading')

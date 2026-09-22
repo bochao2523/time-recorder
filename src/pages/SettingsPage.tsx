@@ -1,24 +1,55 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PageCard } from '../components/layout/Layout'
 import { Toast } from '../components/common/Toast'
 import { useRecords } from '../context/RecordsContext'
 import { useCategories } from '../context/useCategories'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+import { usePwaInstall } from '../hooks/usePwaInstall'
+import { useTimer } from '../context/TimerContext'
+import {
+  disableTimerNotifications,
+  getNotificationCapability,
+  getPersistentStorageState,
+  getTimerNotificationsEnabled,
+  requestPersistentStorage,
+  requestTimerNotifications,
+  supportsPersistentStorage,
+  syncTimerNotification,
+  type NotificationCapability,
+} from '../lib/pwa'
 import type { ImportMode } from '../types'
 
 export function SettingsPage() {
   const { records, exportRecords, importRecords } = useRecords()
   const { activeCategories, archivedCategories, addCategory, removeCategory, restoreCategory } = useCategories()
+  const { sessions } = useTimer()
+  const pwaInstall = usePwaInstall()
   const fileRef = useRef<HTMLInputElement>(null)
   const [pendingJson, setPendingJson] = useState<string | null>(null)
   const [importMode, setImportMode] = useState<ImportMode>('merge')
   const [categoryName, setCategoryName] = useState('')
+  const [notificationCapability, setNotificationCapability] = useState<NotificationCapability>(() => getNotificationCapability())
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => (
+    getTimerNotificationsEnabled() && getNotificationCapability() === 'granted'
+  ))
+  const [storageState, setStorageState] = useState<'checking' | 'protected' | 'available' | 'unsupported'>(() => (
+    supportsPersistentStorage() ? 'checking' : 'unsupported'
+  ))
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' }>({
     visible: false,
     message: '',
     type: 'success',
   })
   useBodyScrollLock(pendingJson !== null)
+
+  useEffect(() => {
+    let active = true
+    void getPersistentStorageState().then((persisted) => {
+      if (!active) return
+      setStorageState(persisted === null ? 'unsupported' : persisted ? 'protected' : 'available')
+    })
+    return () => { active = false }
+  }, [])
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ visible: true, message, type })
@@ -62,6 +93,57 @@ export function SettingsPage() {
     showToast(result.message, result.ok ? 'success' : 'error')
   }
 
+  const handleInstall = async () => {
+    if (pwaInstall.installed) return
+    if (pwaInstall.canPrompt) {
+      const accepted = await pwaInstall.install()
+      showToast(accepted ? '应用安装已开始' : '已取消安装', accepted ? 'success' : 'error')
+      return
+    }
+    showToast(
+      pwaInstall.ios
+        ? '请点浏览器“分享”，再选“添加到主屏幕”'
+        : '请打开浏览器菜单，选择“安装应用”或“添加到主屏幕”',
+    )
+  }
+
+  const handleNotifications = async () => {
+    if (notificationsEnabled) {
+      await disableTimerNotifications()
+      setNotificationsEnabled(false)
+      showToast('锁屏计时提醒已关闭')
+      return
+    }
+    if (notificationCapability === 'denied') {
+      showToast('通知已被系统阻止，请在浏览器或手机设置中允许', 'error')
+      return
+    }
+    const permission = await requestTimerNotifications()
+    setNotificationCapability(permission)
+    const enabled = permission === 'granted'
+    setNotificationsEnabled(enabled)
+    if (enabled) {
+      await syncTimerNotification(sessions)
+      showToast(sessions.length ? '锁屏计时提醒已开启' : '已开启，下次计时会显示提醒')
+    } else {
+      showToast(permission === 'unsupported' ? '当前浏览器不支持锁屏提醒' : '未获得通知权限', 'error')
+    }
+  }
+
+  const handlePersistentStorage = async () => {
+    const persisted = await requestPersistentStorage()
+    if (persisted === null) {
+      setStorageState('unsupported')
+      showToast('当前浏览器不支持此项保护，请继续定期导出备份', 'error')
+      return
+    }
+    setStorageState(persisted ? 'protected' : 'available')
+    showToast(
+      persisted ? '浏览器已尽量避免自动清理本站数据' : '浏览器未授予长期存储，请继续定期导出备份',
+      persisted ? 'success' : 'error',
+    )
+  }
+
   return (
     <div className="space-y-3">
       <Toast
@@ -82,6 +164,78 @@ export function SettingsPage() {
           </div>
         </div>
       </section>
+
+      <PageCard>
+        <div className="mb-2">
+          <h2 className="text-base font-extrabold text-stone-800">安装与锁屏</h2>
+          <p className="mt-1 text-xs leading-relaxed text-stone-light">装到主屏幕后更像独立应用；计时数据仍保存在这台设备。</p>
+        </div>
+
+        <div className="divide-y divide-dashed divide-terracotta/20">
+          <div className="flex min-h-[4.75rem] items-center gap-3 py-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#0f6b56] text-white" aria-hidden>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-extrabold text-stone-800">安装到主屏幕</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-stone-light">{pwaInstall.installed ? '正在以独立应用方式运行' : '支持离线打开，入口更稳定'}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleInstall}
+              disabled={pwaInstall.installed}
+              className="min-h-11 shrink-0 rounded-[10px] border border-terracotta/25 bg-calico px-3 text-sm font-extrabold text-terracotta active:bg-cream-dark disabled:border-[#0f6b56]/20 disabled:text-[#0f6b56] disabled:opacity-100"
+            >
+              {pwaInstall.installed ? '已安装' : pwaInstall.canPrompt ? '安装' : '查看方法'}
+            </button>
+          </div>
+
+          <div className="flex min-h-[4.75rem] items-center gap-3 py-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#f04b6f] text-white" aria-hidden>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></svg>
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-extrabold text-stone-800">锁屏计时提醒</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-stone-light">
+                {notificationCapability === 'unsupported'
+                  ? '需使用支持通知的已安装应用'
+                  : notificationCapability === 'denied'
+                    ? '权限已被系统阻止'
+                    : notificationsEnabled ? '显示正在计时的任务摘要' : '开启后可从锁屏返回计时器'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleNotifications}
+              className={`min-h-11 shrink-0 rounded-[10px] px-3 text-sm font-extrabold active:opacity-80 ${notificationsEnabled ? 'bg-[#0f6b56] text-white' : 'border border-terracotta/25 bg-calico text-terracotta'}`}
+            >
+              {notificationsEnabled ? '已开启' : notificationCapability === 'denied' ? '查看设置' : '开启'}
+            </button>
+          </div>
+
+          <div className="flex min-h-[4.75rem] items-center gap-3 py-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#1467d4] text-white" aria-hidden>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></svg>
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-extrabold text-stone-800">本地数据保护</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-stone-light">
+                {storageState === 'protected'
+                  ? '浏览器会尽量避免自动清理本站数据'
+                  : storageState === 'unsupported' ? '当前浏览器不提供长期存储申请' : '降低长期不用时被自动清理的风险'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handlePersistentStorage}
+              disabled={storageState === 'protected' || storageState === 'checking'}
+              className="min-h-11 shrink-0 rounded-[10px] border border-terracotta/25 bg-calico px-3 text-sm font-extrabold text-terracotta active:bg-cream-dark disabled:text-[#1467d4] disabled:opacity-100"
+            >
+              {storageState === 'checking' ? '检查中' : storageState === 'protected' ? '已保护' : '申请保护'}
+            </button>
+          </div>
+        </div>
+      </PageCard>
 
       <PageCard>
         <div className="mb-4">

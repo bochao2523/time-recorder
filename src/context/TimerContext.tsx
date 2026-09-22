@@ -38,6 +38,7 @@ import {
   type TimerTarget,
 } from '../lib/timerStorage'
 import { useRecords } from './RecordsContext'
+import { syncTimerNotification } from '../lib/pwa'
 
 export type StopTimerResult =
   | { ok: true; sessionId: string; minutes: number; taskName: string; category: Category; targets: TimerTarget[]; date: string }
@@ -237,6 +238,11 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('focus', tick)
     }
   }, [sessions, modalOpen])
+
+  // 状态变化时更新一次锁屏摘要，不按秒刷新，避免额外耗电和通知抖动。
+  useEffect(() => {
+    void syncTimerNotification(sessions)
+  }, [sessions])
 
   // 各计时器独立过期或完成，不影响同批其他任务。
   useEffect(() => {
