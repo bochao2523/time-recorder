@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import type { DailyRecord } from '../../types'
 import { getTotalMinutes } from '../../lib/stats'
 import { today } from '../../lib/dateUtils'
-import { colors } from '../../theme/colors'
+import { categoryForeground, colors } from '../../theme/colors'
 
 interface MonthCalendarGridProps {
   records: DailyRecord[]
@@ -34,18 +34,27 @@ function buildMonthGrid(year: number, month: number): CalendarCell[] {
   return cells
 }
 
-/** 米白 → 陶土色渐变 */
+const HEATMAP_EMPTY = '#F0EDE9'
+const HEATMAP_FULL = colors.terracotta
+
+function interpolateHex(start: string, end: string, ratio: number): string {
+  const channel = (hex: string, offset: number) => Number.parseInt(hex.slice(offset, offset + 2), 16)
+  const mixed = [1, 3, 5].map((offset) => (
+    Math.round(channel(start, offset) + (channel(end, offset) - channel(start, offset)) * ratio)
+  ))
+  return `#${mixed.map((value) => value.toString(16).padStart(2, '0')).join('')}`
+}
+
+/** 图例与日期格共用同一条米白 → 车厂绿强度色阶。 */
 function heatCellColor(minutes: number, maxMinutes: number): { bg: string; text: string } {
   if (minutes <= 0) {
-    return { bg: '#F0EDE9', text: colors.stoneLight }
+    return { bg: HEATMAP_EMPTY, text: colors.stoneLight }
   }
   const ratio = maxMinutes > 0 ? Math.min(minutes / maxMinutes, 1) : 1
-  const r = Math.round(250 + (224 - 250) * ratio)
-  const g = Math.round(247 + (122 - 247) * ratio)
-  const b = Math.round(242 + (95 - 242) * ratio)
+  const bg = interpolateHex(HEATMAP_EMPTY, HEATMAP_FULL, ratio)
   return {
-    bg: `rgb(${r}, ${g}, ${b})`,
-    text: ratio > 0.55 ? '#FFFFFF' : colors.stone,
+    bg,
+    text: categoryForeground(bg),
   }
 }
 
@@ -164,7 +173,7 @@ export function MonthCalendarGrid({
         <div
           className="h-2.5 flex-1 max-w-[120px] rounded-full"
           style={{
-            background: `linear-gradient(to right, #F0EDE9, ${colors.terracotta})`,
+            background: `linear-gradient(to right, ${HEATMAP_EMPTY}, ${HEATMAP_FULL})`,
           }}
         />
         <span>多</span>
