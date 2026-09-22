@@ -7,6 +7,7 @@ import { ChartContainer } from '../components/charts/ChartContainer'
 import { LineTrendChart } from '../components/charts/LineTrendChart'
 import { DonutChart } from '../components/charts/DonutChart'
 import { SubCategoryBarChart } from '../components/charts/SubCategoryBarChart'
+import { MonthlyCategoryOverview } from '../components/charts/MonthlyCategoryOverview'
 import { useRecords } from '../context/RecordsContext'
 import { useCategories } from '../context/useCategories'
 import type { TimeRange } from '../types'
@@ -62,8 +63,10 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-3">
+      <MonthlyCategoryOverview records={records} categories={categories} />
+
       <PageCard>
-        <h2 className="mb-3 text-[15px] font-semibold text-stone-800">时间范围</h2>
+        <h2 className="mb-3 text-[15px] font-semibold text-stone-800">自选时间范围</h2>
         <TimeRangePicker value={range} onChange={setRange} />
       </PageCard>
 
