@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Category, DailyRecord } from '../../types'
 import { formatCategoryCell } from '../../lib/categoryItems'
@@ -128,20 +128,6 @@ export function HistoryTable({ records, highlightDate, onDelete }: HistoryTableP
       category.active || records.some((record) => (record.minutes[category.id] ?? 0) > 0)
     ))
   }, [records, categories, getCategory])
-  const highlightRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (!highlightDate || highlightDate === highlightRef.current) return
-    highlightRef.current = highlightDate
-    const timer = setTimeout(() => {
-      document.getElementById(`history-row-${highlightDate}`)?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      })
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [highlightDate, sorted])
-
   if (sorted.length === 0) {
     return <EmptyState message="这里还没有留下足迹" actionLabel="记下第一条" onAction={() => navigate('/')} />
   }
@@ -167,7 +153,7 @@ export function HistoryTable({ records, highlightDate, onDelete }: HistoryTableP
             {sorted.map((r) => (
               <tr
                 key={r.date}
-                id={`history-row-${r.date}`}
+                data-history-date={r.date}
                 className={`border-b border-cream-dark/60 transition-colors ${
                   highlightDate === r.date ? 'bg-terracotta/5' : ''
                 }`}
@@ -193,7 +179,7 @@ export function HistoryTable({ records, highlightDate, onDelete }: HistoryTableP
         {sorted.map((r) => (
           <article
             key={r.date}
-            id={`history-row-${r.date}`}
+            data-history-date={r.date}
             className={`rounded-2xl border bg-white p-4 shadow-[0_4px_18px_rgba(48,44,41,0.045)] transition-colors ${
               highlightDate === r.date
                 ? 'border-terracotta bg-terracotta/5 ring-1 ring-terracotta/30'

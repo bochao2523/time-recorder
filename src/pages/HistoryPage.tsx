@@ -79,6 +79,18 @@ export function HistoryPage() {
   const handleCalendarDayClick = (date: string) => {
     if (filtered.some((r) => r.date === date)) {
       setHighlightDate(date)
+      requestAnimationFrame(() => {
+        const matchingRows = Array.from(
+          document.querySelectorAll<HTMLElement>('[data-history-date]'),
+        )
+        const visibleRow = matchingRows.find((row) => (
+          row.dataset.historyDate === date && row.getClientRects().length > 0
+        ))
+        visibleRow?.scrollIntoView({
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+          block: 'center',
+        })
+      })
       return
     }
     navigate(`/?date=${date}`)
