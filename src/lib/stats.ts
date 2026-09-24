@@ -155,10 +155,11 @@ export function aggregateSubItemsByCategory(
     const subItems = subItemsFromRecord(record)
     for (const cat of categories) {
       for (const item of subItems[cat] ?? []) {
-        if (item.minutes <= 0) continue
-        const name = item.name.trim() || '未命名'
+        const minutes = Number(item.minutes)
+        if (!Number.isFinite(minutes) || minutes <= 0) continue
+        const name = (typeof item.name === 'string' ? item.name.trim() : '') || '未命名'
         const bucket = maps[cat]
-        bucket.set(name, (bucket.get(name) ?? 0) + item.minutes)
+        bucket.set(name, (bucket.get(name) ?? 0) + minutes)
       }
     }
   }

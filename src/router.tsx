@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
-import { HashRouter, Routes, Route } from 'react-router-dom'
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { Layout } from './components/layout/Layout'
+import { PageErrorBoundary } from './components/common/PageErrorBoundary'
 
 const TodayPage = lazy(() => import('./pages/TodayPage').then((module) => ({ default: module.TodayPage })))
 const ReadingPage = lazy(() => import('./pages/ReadingPage').then((module) => ({ default: module.ReadingPage })))
@@ -21,7 +22,12 @@ function PageLoader() {
 }
 
 function LazyPage({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<PageLoader />}>{children}</Suspense>
+  const location = useLocation()
+  return (
+    <PageErrorBoundary key={location.pathname}>
+      <Suspense fallback={<PageLoader />}>{children}</Suspense>
+    </PageErrorBoundary>
+  )
 }
 
 export function AppRouter() {

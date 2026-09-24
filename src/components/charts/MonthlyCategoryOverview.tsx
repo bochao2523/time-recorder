@@ -91,63 +91,69 @@ function MonthlyCategoryDetailSheet({
         aria-modal="true"
         aria-labelledby="monthly-category-detail-title"
         data-scroll-lock-allow
-        className="reading-sheet calico-surface max-h-[82svh] w-full max-w-md overflow-y-auto rounded-t-[20px] border border-terracotta/25 px-4 pt-3 shadow-[0_-16px_42px_rgba(8,43,34,0.28)] sm:rounded-[18px] sm:p-5"
-        style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
+        className="reading-sheet calico-surface flex max-h-[82svh] w-full max-w-md flex-col overflow-hidden rounded-t-[20px] border border-terracotta/25 shadow-[0_-16px_42px_rgba(8,43,34,0.28)] sm:rounded-[18px]"
       >
-        <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-terracotta/25 sm:hidden" aria-hidden />
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 pt-1 sm:pt-0">
-            <div className="flex items-center gap-2">
-              <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: category.color }} aria-hidden />
-              <h2 id="monthly-category-detail-title" className="truncate text-xl font-extrabold text-terracotta">{category.label}</h2>
+        <div className="shrink-0 px-4 pt-3 sm:px-5 sm:pt-5">
+          <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-terracotta/25 sm:hidden" aria-hidden />
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 pt-1 sm:pt-0">
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: category.color }} aria-hidden />
+                <h2 id="monthly-category-detail-title" className="truncate text-xl font-extrabold text-terracotta">{category.label}</h2>
+              </div>
+              <p className="mt-1 text-xs text-stone-light">{monthLabel} · 小类时间明细</p>
             </div>
-            <p className="mt-1 text-xs text-stone-light">{monthLabel} · 小类时间明细</p>
+            <button
+              ref={closeButtonRef}
+              type="button"
+              onClick={onClose}
+              aria-label="关闭小类时间明细"
+              className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-[10px] text-terracotta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-terracotta active:bg-cream-dark"
+            >
+              <CloseIcon />
+            </button>
           </div>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            onClick={onClose}
-            aria-label="关闭小类时间明细"
-            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-[10px] text-terracotta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-terracotta active:bg-cream-dark"
-          >
-            <CloseIcon />
-          </button>
+
+          <div className="mt-3 flex items-end justify-between gap-4 border-y border-dashed border-terracotta/25 py-3.5">
+            <div>
+              <p className="text-xs font-bold text-stone-light">大类累计</p>
+              <p className="depot-display mt-1 text-3xl font-extrabold leading-none tabular-nums text-terracotta">{formatMinutes(category.minutes)}</p>
+            </div>
+            <p className="shrink-0 text-right text-xs font-bold text-stone-light">小类<br /><span className="depot-display text-lg font-extrabold tabular-nums text-terracotta">{details.length} 项</span></p>
+          </div>
         </div>
 
-        <div className="mt-4 flex items-end justify-between gap-4 border-y border-dashed border-terracotta/25 py-4">
-          <div>
-            <p className="text-xs font-bold text-stone-light">大类累计</p>
-            <p className="depot-display mt-1 text-3xl font-extrabold leading-none tabular-nums text-terracotta">{formatMinutes(category.minutes)}</p>
-          </div>
-          <p className="shrink-0 text-right text-xs font-bold text-stone-light">小类<br /><span className="depot-display text-lg font-extrabold tabular-nums text-terracotta">{details.length} 项</span></p>
+        <div
+          className="scroll-region min-h-0 flex-1 overflow-y-auto px-4 sm:px-5"
+          style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
+        >
+          {details.length > 0 ? (
+            <ol className="divide-y divide-cream-dark/70">
+              {details.map((item, index) => {
+                const share = detailTotal > 0 ? Math.round(item.minutes / detailTotal * 100) : 0
+                return (
+                  <li key={`${item.name}-${index}`} className="py-3.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="min-w-0 flex-1 break-words text-sm font-extrabold leading-5 text-depot-ink">{item.name}</span>
+                      <span className="shrink-0 text-sm font-extrabold tabular-nums text-terracotta">
+                        {formatMinutes(item.minutes)}
+                        <span className="ml-2 text-xs font-bold text-stone-light">{share}%</span>
+                      </span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-[3px] bg-cream-dark/55" aria-hidden>
+                      <span className="block h-full rounded-[3px]" style={{ width: `${share}%`, backgroundColor: category.color }} />
+                    </div>
+                  </li>
+                )
+              })}
+            </ol>
+          ) : (
+            <div className="mt-4 rounded-[10px] border border-dashed border-terracotta/25 bg-cream px-4 py-7 text-center">
+              <p className="text-sm font-extrabold text-terracotta">这个月还没有小类记录</p>
+              <p className="mt-1 text-xs leading-5 text-stone-light">记录任务名称后，这里会按小类汇总时间。</p>
+            </div>
+          )}
         </div>
-
-        {details.length > 0 ? (
-          <ol className="mt-1 divide-y divide-cream-dark/70">
-            {details.map((item, index) => {
-              const share = detailTotal > 0 ? Math.round(item.minutes / detailTotal * 100) : 0
-              return (
-                <li key={`${item.name}-${index}`} className="py-3.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="min-w-0 flex-1 break-words text-sm font-extrabold leading-5 text-depot-ink">{item.name}</span>
-                    <span className="shrink-0 text-sm font-extrabold tabular-nums text-terracotta">
-                      {formatMinutes(item.minutes)}
-                      <span className="ml-2 text-xs font-bold text-stone-light">{share}%</span>
-                    </span>
-                  </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-[3px] bg-cream-dark/55" aria-hidden>
-                    <span className="block h-full rounded-[3px]" style={{ width: `${share}%`, backgroundColor: category.color }} />
-                  </div>
-                </li>
-              )
-            })}
-          </ol>
-        ) : (
-          <div className="mt-4 rounded-[10px] border border-dashed border-terracotta/25 bg-cream px-4 py-7 text-center">
-            <p className="text-sm font-extrabold text-terracotta">这个月还没有小类记录</p>
-            <p className="mt-1 text-xs leading-5 text-stone-light">记录任务名称后，这里会按小类汇总时间。</p>
-          </div>
-        )}
       </section>
     </div>,
     document.body,
