@@ -1,12 +1,9 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageCard } from '../components/layout/Layout'
 import { TimeRangePicker } from '../components/common/TimeRangePicker'
 import { EmptyState } from '../components/common/EmptyState'
 import { ChartContainer } from '../components/charts/ChartContainer'
-import { LineTrendChart } from '../components/charts/LineTrendChart'
-import { DonutChart } from '../components/charts/DonutChart'
-import { SubCategoryBarChart } from '../components/charts/SubCategoryBarChart'
 import { MonthlyCategoryOverview } from '../components/charts/MonthlyCategoryOverview'
 import { useRecords } from '../context/RecordsContext'
 import { useCategories } from '../context/useCategories'
@@ -21,6 +18,62 @@ import {
   getRangeTotalMinutes,
 } from '../lib/stats'
 import { formatMinutes, today } from '../lib/dateUtils'
+
+const LineTrendChart = lazy(() => import('../components/charts/LineTrendChart').then((module) => ({ default: module.LineTrendChart })))
+const DonutChart = lazy(() => import('../components/charts/DonutChart').then((module) => ({ default: module.DonutChart })))
+const SubCategoryBarChart = lazy(() => import('../components/charts/SubCategoryBarChart').then((module) => ({ default: module.SubCategoryBarChart })))
+
+function ChartLoadingCard({ title, height }: { title: string; height: number }) {
+  return (
+    <ChartContainer title={title} height={height}>
+      <div className="flex h-full items-center justify-center" aria-label={`${title}正在准备`}>
+        <div className="flex items-center gap-2 text-sm font-bold text-stone-light">
+          <span className="depot-eyelet" aria-hidden />
+          图表准备中
+        </div>
+      </div>
+    </ChartContainer>
+  )
+}
+
+function DeferredChart({
+  title,
+  height,
+  children,
+}: {
+  title: string
+  height: number
+  children: ReactNode
+}) {
+  const hostRef = useRef<HTMLDivElement>(null)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const host = hostRef.current
+    if (!host || typeof IntersectionObserver === 'undefined') {
+      setReady(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return
+      setReady(true)
+      observer.disconnect()
+    }, { rootMargin: '320px 0px' })
+    observer.observe(host)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div ref={hostRef}>
+      {ready ? (
+        <Suspense fallback={<ChartLoadingCard title={title} height={height} />}>
+          {children}
+        </Suspense>
+      ) : <ChartLoadingCard title={title} height={height} />}
+    </div>
+  )
+}
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -114,28 +167,37 @@ export function DashboardPage() {
         </PageCard>
       ) : <>
       {range.preset !== 'today' && (
-        <ChartContainer title="时间趋势" isEmpty={!hasChartData} height={300}>
-          <LineTrendChart records={records} range={range} categories={displayCategories} />
-        </ChartContainer>
+        <DeferredChart title="时间趋势" height={300}>
+          <ChartContainer title="时间趋势" isEmpty={!hasChartData} height={300}>
+            <LineTrendChart records={records} range={range} categories={displayCategories} />
+          </ChartContainer>
+        </DeferredChart>
       )}
 
-      <ChartContainer title="时间分布" isEmpty={!hasChartData} height={300}>
-        <DonutChart records={records} range={range} categories={displayCategories} />
-      </ChartContainer>
+      <DeferredChart title="时间分布" height={300}>
+        <ChartContainer title="时间分布" isEmpty={!hasChartData} height={300}>
+          <DonutChart records={records} range={range} categories={displayCategories} />
+        </ChartContainer>
+      </DeferredChart>
 
       {categoriesWithSubItems.length > 0 && <div>
         <h2 className="mb-3 px-1 text-[15px] font-semibold text-stone-800">任务排行</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {categoriesWithSubItems.map((category) => (
-            <ChartContainer
+            <DeferredChart
               key={`sub-bar-${category.id}`}
               title={`${category.label} · 项目排行`}
-              isEmpty={subItemsByCategory[category.id].length === 0}
-              emptyMessage="还没有项目记录"
               height={260}
             >
-              <SubCategoryBarChart category={category} data={subItemsByCategory[category.id]} />
-            </ChartContainer>
+              <ChartContainer
+                title={`${category.label} · 项目排行`}
+                isEmpty={subItemsByCategory[category.id].length === 0}
+                emptyMessage="还没有项目记录"
+                height={260}
+              >
+                <SubCategoryBarChart category={category} data={subItemsByCategory[category.id]} />
+              </ChartContainer>
+            </DeferredChart>
           ))}
         </div>
       </div>}

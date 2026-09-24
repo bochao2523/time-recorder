@@ -13,6 +13,67 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0"
     />
     <title>每日时间追踪</title>
+    <style>
+      html, body { margin: 0; min-height: 100%; background: #e8dfc8; }
+      .app-boot {
+        box-sizing: border-box;
+        display: grid;
+        min-height: 100svh;
+        place-items: center;
+        padding: max(1.5rem, env(safe-area-inset-top)) 1.5rem max(1.5rem, env(safe-area-inset-bottom));
+        color: #0e3a2e;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      }
+      .app-boot__panel { width: min(100%, 22rem); text-align: center; }
+      .app-boot__mark {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 0.25rem solid #b18f18;
+        border-radius: 50%;
+        background: #e8d28c;
+        box-shadow: inset 0 0 0 0.125rem #171a18;
+      }
+      .app-boot__title { margin: 1rem 0 0; font-size: 1.25rem; font-weight: 800; }
+      .app-boot__copy { margin: 0.4rem 0 0; color: #5f5a4c; font-size: 1rem; }
+      .app-boot__retry {
+        display: none;
+        min-height: 2.75rem;
+        margin: 1.25rem auto 0;
+        padding: 0 1.25rem;
+        border: 0;
+        border-radius: 0.625rem;
+        background: #0e3a2e;
+        color: #f2efe6;
+        font: inherit;
+        font-weight: 800;
+      }
+      .app-boot.is-delayed .app-boot__retry { display: block; }
+    </style>
+    <script>
+      (() => {
+        const retryKey = 'time-depot:preload-retry-at'
+        window.addEventListener('vite:preloadError', (event) => {
+          try {
+            const lastRetry = Number(sessionStorage.getItem(retryKey) || 0)
+            if (Date.now() - lastRetry < 60000) return
+            event.preventDefault()
+            sessionStorage.setItem(retryKey, String(Date.now()))
+            window.location.reload()
+          } catch {
+            // Storage can be unavailable in private mode; let the page error boundary handle it.
+          }
+        })
+
+        window.setTimeout(() => {
+          const boot = document.getElementById('app-boot')
+          if (!boot) return
+          boot.classList.add('is-delayed')
+          const copy = boot.querySelector('[data-boot-copy]')
+          if (copy) copy.textContent = '加载时间比平时更长，可以检查网络后重新载入。'
+        }, 8000)
+      })()
+    </script>
   </head>
   <body>
     <!--
@@ -23,7 +84,16 @@
       FORM: Operate-mode depot destination blind challenger, control-first composition, seed 4a47fa14.
       FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
     -->
-    <div id="root"></div>
+    <div id="root">
+      <div id="app-boot" class="app-boot" role="status" aria-live="polite">
+        <div class="app-boot__panel">
+          <span class="app-boot__mark" aria-hidden="true"></span>
+          <p class="app-boot__title">时间站正在启动</p>
+          <p class="app-boot__copy" data-boot-copy>正在读取保存在设备上的记录</p>
+          <button class="app-boot__retry" type="button" onclick="window.location.reload()">重新载入</button>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
