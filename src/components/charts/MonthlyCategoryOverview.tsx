@@ -11,6 +11,7 @@ import {
   type SubItemAggregate,
 } from '../../lib/stats'
 import { DATE_FORMAT, formatMinutes } from '../../lib/dateUtils'
+import './MonthlyCategoryOverview.css'
 
 interface MonthlyCategoryOverviewProps {
   records: DailyRecord[]
@@ -91,7 +92,7 @@ function MonthlyCategoryDetailSheet({
         aria-modal="true"
         aria-labelledby="monthly-category-detail-title"
         data-scroll-lock-allow
-        className="reading-sheet calico-surface flex max-h-[82svh] w-full max-w-md flex-col overflow-hidden rounded-t-[20px] border border-terracotta/25 shadow-[0_-16px_42px_rgba(8,43,34,0.28)] sm:rounded-[18px]"
+        className="reading-sheet monthly-category-sheet calico-surface flex max-h-[82svh] w-full max-w-md flex-col overflow-hidden rounded-t-[20px] border border-terracotta/25 shadow-[0_-16px_42px_rgba(8,43,34,0.28)] sm:rounded-[18px]"
       >
         <div className="shrink-0 px-4 pt-3 sm:px-5 sm:pt-5">
           <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-terracotta/25 sm:hidden" aria-hidden />

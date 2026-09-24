@@ -1,0 +1,13 @@
+/* iOS 会截断滚动弹层里的绝对定位纹理；直接在弹层表面绘制可覆盖整个可视区域。 */
+.monthly-category-sheet {
+  background-color: var(--calico);
+  background-image:
+    linear-gradient(rgba(242, 239, 230, 0.16), rgba(242, 239, 230, 0.16)),
+    url('../../assets/depot-calico-cloth-texture.jpg');
+  background-repeat: no-repeat, repeat;
+  background-size: 100% 100%, 320px 320px;
+}
+
+.monthly-category-sheet::before {
+  content: none;
+}
