@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { PageCard } from '../components/layout/Layout'
 import { DatePicker } from '../components/common/DatePicker'
 import { CategoryInput } from '../components/common/CategoryInput'
+import { DailyCompletionCelebration } from '../components/common/DailyCompletionCelebration'
 import { useRecords } from '../context/RecordsContext'
 import { useTimer } from '../context/TimerContext'
 import {
@@ -28,6 +29,8 @@ import { useCategories } from '../context/useCategories'
 
 const AUTO_SAVE_DELAY_MS = 600
 const SAVED_HINT_DURATION_MS = 3000
+const COMPLETION_CELEBRATION_DURATION_MS = 3400
+const COMPLETION_STORAGE_PREFIX = 'time-tracker:daily-completion'
 
 type SaveStatus = 'idle' | 'pending' | 'saved'
 
@@ -81,6 +84,7 @@ export function TodayPage() {
   const [selectedDate, setSelectedDate] = useState(initialDate)
   const [subItems, setSubItems] = useState<CategorySubItems>(createEmptySubItems())
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+  const [showCompletionCelebration, setShowCompletionCelebration] = useState(false)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveStatusRef = useRef(saveStatus)
   saveStatusRef.current = saveStatus
@@ -121,6 +125,20 @@ export function TodayPage() {
       .map(([id]) => getCategory(id))
     return [...activeCategories, ...archivedWithTime]
   }, [activeCategories, subItems, getCategory])
+
+  const allActiveCategoriesComplete = useMemo(() => (
+    activeCategories.length > 0 && activeCategories.every((category) => (
+      sumSubItemMinutes(subItems[category.id]) > 0
+    ))
+  ), [activeCategories, subItems])
+
+  const completionStorageKey = useMemo(() => {
+    const categorySignature = activeCategories
+      .map((category) => category.id)
+      .sort()
+      .join(',')
+    return `${COMPLETION_STORAGE_PREFIX}:${selectedDate}:${categorySignature}`
+  }, [activeCategories, selectedDate])
 
   const activeTimerTargets = useMemo(
     () => sessions.flatMap((timer) => getSessionTargets(timer)),
@@ -249,6 +267,27 @@ export function TodayPage() {
     }
   }, [saveStatus])
 
+  // 当天所有启用大类首次出现有效记录时播放一次完成动画。
+  useEffect(() => {
+    if (selectedDate !== today() || !allActiveCategoriesComplete) {
+      setShowCompletionCelebration(false)
+      return
+    }
+
+    try {
+      if (localStorage.getItem(completionStorageKey)) return
+      localStorage.setItem(completionStorageKey, new Date().toISOString())
+    } catch {
+      // 隐私模式或存储空间不足时仍允许本次庆祝；该 effect 的依赖不变时不会重复触发。
+    }
+
+    setShowCompletionCelebration(true)
+    const timer = window.setTimeout(() => {
+      setShowCompletionCelebration(false)
+    }, COMPLETION_CELEBRATION_DURATION_MS)
+    return () => window.clearTimeout(timer)
+  }, [allActiveCategoriesComplete, completionStorageKey, selectedDate])
+
   return (
     <div className="no-layout-animation space-y-3">
       <PageCard className="p-2.5 sm:p-3">
@@ -259,11 +298,22 @@ export function TodayPage() {
       </PageCard>
 
       <section className="depot-cloth stitched-panel overflow-hidden rounded-[14px] p-4 sm:p-5" aria-labelledby="today-total-title">
+        <DailyCompletionCelebration
+          categories={activeCategories}
+          visible={showCompletionCelebration}
+        />
         <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(12.5rem,auto)_minmax(0,1fr)] sm:items-end sm:gap-5">
           <div className="min-w-0 overflow-hidden border-b border-chrome-yellow/35 pb-3 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-5">
-            <p id="today-total-title" className="depot-display text-sm font-extrabold tracking-[0.08em] text-chrome-yellow/85">
-              {selectedDate === today() ? '今日已记录' : formatDisplayDate(selectedDate)}
-            </p>
+            <div className="flex min-w-0 items-center gap-2">
+              <p id="today-total-title" className="depot-display text-sm font-extrabold tracking-[0.08em] text-chrome-yellow/85">
+                {selectedDate === today() ? '今日已记录' : formatDisplayDate(selectedDate)}
+              </p>
+              {allActiveCategoriesComplete && (
+                <span className="shrink-0 rounded-[10px] border border-chrome-yellow/55 bg-chrome-yellow px-1.5 py-0.5 text-xs font-extrabold leading-none text-depot-green">
+                  全部打卡
+                </span>
+              )}
+            </div>
             <p className="depot-display mt-1 max-w-full whitespace-nowrap text-[2.25rem] font-extrabold leading-none tracking-[-0.02em] text-chrome-yellow sm:text-[2.65rem]">
               {formatSummaryTotal(total)}
             </p>

@@ -1,0 +1,136 @@
+.daily-completion-celebration {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 48%, rgba(255, 210, 0, 0.2), rgba(8, 43, 34, 0.9) 64%);
+  animation: completion-backdrop 3.25s ease-out both;
+}
+
+.daily-completion-burst {
+  position: absolute;
+  inset: 0;
+}
+
+.daily-completion-ticket {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 3.2rem;
+  max-width: 5.4rem;
+  overflow: hidden;
+  border: 1px solid rgba(242, 239, 230, 0.68);
+  border-radius: 10px;
+  padding: 0.25rem 0.5rem;
+  color: var(--calico);
+  background: var(--completion-color);
+  box-shadow: 0 7px 18px rgba(8, 43, 34, 0.28);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+  animation: completion-ticket-flight 1.45s var(--completion-delay) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.daily-completion-stamp {
+  position: relative;
+  display: grid;
+  min-width: 10.5rem;
+  place-items: center;
+  border: 1px solid rgba(14, 58, 46, 0.28);
+  border-radius: 14px;
+  padding: 1rem 1.3rem 0.9rem;
+  color: var(--depot-green-deep);
+  background-color: var(--calico);
+  background-image: url('../../assets/depot-calico-cloth-texture.jpg');
+  background-size: 320px 320px;
+  box-shadow:
+    inset 0 0 0 5px rgba(242, 239, 230, 0.72),
+    inset 0 0 0 6px rgba(182, 154, 74, 0.68),
+    0 18px 44px rgba(8, 43, 34, 0.38);
+  animation: completion-stamp-land 3.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.daily-completion-stamp strong {
+  margin-top: 0.35rem;
+  color: var(--depot-green);
+  font-family: "Barlow Condensed", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.daily-completion-stamp > span:last-child {
+  margin-top: 0.35rem;
+  color: #5f5a4c;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.daily-completion-check {
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  place-items: center;
+  border: 2px solid var(--depot-green);
+  border-radius: 50%;
+  color: var(--chrome-yellow);
+  background: var(--depot-green);
+  box-shadow: inset 0 0 0 4px var(--calico);
+}
+
+@keyframes completion-backdrop {
+  0% { opacity: 0; clip-path: circle(10% at 50% 50%); }
+  12%, 76% { opacity: 1; clip-path: circle(76% at 50% 50%); }
+  100% { opacity: 0; clip-path: circle(76% at 50% 50%); }
+}
+
+@keyframes completion-ticket-flight {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.55) rotate(0deg);
+  }
+  24% { opacity: 1; }
+  72% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--completion-x)), calc(-50% + var(--completion-y))) scale(1) rotate(var(--completion-rotation));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--completion-x)), calc(-50% + var(--completion-y))) scale(0.82) rotate(var(--completion-rotation));
+  }
+}
+
+@keyframes completion-stamp-land {
+  0% { opacity: 0; clip-path: inset(48% round 14px); transform: scale(0.84) rotate(-4deg); }
+  20% { opacity: 1; clip-path: inset(0 round 14px); transform: scale(1.04) rotate(1deg); }
+  30%, 78% { opacity: 1; clip-path: inset(0 round 14px); transform: scale(1) rotate(0deg); }
+  100% { opacity: 0; clip-path: inset(0 round 14px); transform: scale(0.97); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-completion-celebration {
+    animation: completion-reduced 2.4s ease-out both !important;
+  }
+
+  .daily-completion-ticket {
+    display: none;
+  }
+
+  .daily-completion-stamp {
+    animation: completion-reduced 2.4s ease-out both !important;
+  }
+}
+
+@keyframes completion-reduced {
+  0%, 100% { opacity: 0; }
+  12%, 80% { opacity: 1; }
+}
