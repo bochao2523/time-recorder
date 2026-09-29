@@ -221,8 +221,18 @@ export function appendReadingSessionToRecord(
     : existing ?? { date, minutes: {} }
   if (!timed) return null
 
+  return appendReadingLogToRecord(timed, date, entry)
+}
+
+/** 仅写入阅读页码日志；用于跨天计时时避免重复累加阅读分钟。 */
+export function appendReadingLogToRecord(
+  existing: DailyRecord | undefined,
+  date: string,
+  entry: ReadingLogEntry,
+): DailyRecord {
   return {
-    ...timed,
+    ...(existing ?? { date, minutes: {} }),
+    date,
     readingLogs: normalizeReadingLogs([
       ...(existing?.readingLogs ?? []),
       entry,

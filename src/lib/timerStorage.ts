@@ -1,4 +1,6 @@
 import type { Category } from '../types'
+import dayjs from 'dayjs'
+import { DATE_FORMAT, formatDate } from './dateUtils'
 
 /** 旧版单计时器存储键，仅用于无损迁移。 */
 export const TIMER_STORAGE_KEY = 'time-tracker:active-timer'
@@ -32,6 +34,10 @@ export interface ActiveTimerSession {
   mode: TimerMode
   durationMs?: number
   baseElapsedMs: number
+  /** 已结束运行片段按本地自然日累计的毫秒数。 */
+  elapsedMsByDate?: Record<string, number>
+  /** 计时器指定日期与真实启动日期的日历偏移，用于历史日期上启动计时。 */
+  dateOffsetDays?: number
   segmentStartedAt: number | null
   completionKind?: TimerCompletionKind
 }
@@ -41,6 +47,7 @@ export interface PendingReadingCompletion {
   bookTitle: string
   date: string
   minutes: number
+  minuteAllocations?: Record<string, number>
   completedAt: string
 }
 
@@ -96,6 +103,121 @@ export function getElapsedMs(session: ActiveTimerSession, now = Date.now()): num
     return Math.min(elapsed, session.durationMs)
   }
   return elapsed
+}
+
+function normalizeElapsedMsByDate(value: unknown): Record<string, number> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>).flatMap(([date, ms]) => (
+    /^\d{4}-\d{2}-\d{2}$/.test(date) && typeof ms === 'number' && Number.isFinite(ms) && ms > 0
+      ? [[date, ms]]
+      : []
+  )))
+}
+
+function normalizeMinuteAllocations(value: unknown): Record<string, number> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>).flatMap(([date, minutes]) => (
+    /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+    typeof minutes === 'number' &&
+    Number.isInteger(minutes) &&
+    minutes > 0
+      ? [[date, minutes]]
+      : []
+  )))
+}
+
+function addElapsedMs(target: Record<string, number>, date: string, ms: number): void {
+  if (ms <= 0) return
+  target[date] = (target[date] ?? 0) + ms
+}
+
+/** 将一个真实时间段按本地午夜切开，并映射到计时器的逻辑日期。 */
+export function splitElapsedRangeByDate(
+  startMs: number,
+  endMs: number,
+  dateOffsetDays = 0,
+): Record<string, number> {
+  const result: Record<string, number> = {}
+  let cursor = Math.max(0, startMs)
+  const end = Math.max(cursor, endMs)
+
+  while (cursor < end) {
+    const cursorDate = new Date(cursor)
+    const nextMidnight = new Date(
+      cursorDate.getFullYear(),
+      cursorDate.getMonth(),
+      cursorDate.getDate() + 1,
+    ).getTime()
+    const sliceEnd = Math.min(end, nextMidnight)
+    const logicalDate = dayjs(formatDate(cursorDate))
+      .add(dateOffsetDays, 'day')
+      .format(DATE_FORMAT)
+    addElapsedMs(result, logicalDate, sliceEnd - cursor)
+    cursor = sliceEnd
+  }
+
+  return result
+}
+
+/** 返回完整会话按日期分配的毫秒；暂停时间不会被计入。 */
+export function getElapsedMsByDate(
+  session: ActiveTimerSession,
+  now = Date.now(),
+): Record<string, number> {
+  const result = normalizeElapsedMsByDate(session.elapsedMsByDate)
+  const accountedMs = Object.values(result).reduce((sum, ms) => sum + ms, 0)
+  const legacyUnallocatedMs = Math.max(0, session.baseElapsedMs - accountedMs)
+  addElapsedMs(result, session.date, legacyUnallocatedMs)
+
+  if (session.status !== 'running' || session.segmentStartedAt == null) return result
+
+  const rawSegmentMs = Math.max(0, now - session.segmentStartedAt)
+  const remainingCountdownMs = session.mode === 'countdown' && session.durationMs != null
+    ? Math.max(0, session.durationMs - session.baseElapsedMs)
+    : rawSegmentMs
+  const segmentMs = Math.min(rawSegmentMs, remainingCountdownMs)
+  if (segmentMs <= 0) return result
+
+  const inferredOffset = dayjs(session.date).diff(
+    dayjs(formatDate(new Date(session.segmentStartedAt))),
+    'day',
+  )
+  const dateOffsetDays = Number.isInteger(session.dateOffsetDays)
+    ? session.dateOffsetDays ?? 0
+    : inferredOffset
+  const runningSlices = splitElapsedRangeByDate(
+    session.segmentStartedAt,
+    session.segmentStartedAt + segmentMs,
+    dateOffsetDays,
+  )
+  for (const [date, ms] of Object.entries(runningSlices)) addElapsedMs(result, date, ms)
+  return result
+}
+
+/** 按最大余数法取整，保证各日期分钟之和等于整次计时的总分钟数。 */
+export function elapsedMsByDateToMinutes(
+  elapsedMsByDate: Record<string, number>,
+): Record<string, number> {
+  const entries = Object.entries(elapsedMsByDate).filter(([, ms]) => ms > 0)
+  const totalMinutes = elapsedMsToMinutes(entries.reduce((sum, [, ms]) => sum + ms, 0))
+  if (totalMinutes <= 0 || entries.length === 0) return {}
+
+  const ranked = entries.map(([date, ms]) => {
+    const exactMinutes = ms / 60_000
+    const minutes = Math.floor(exactMinutes)
+    return { date, minutes, remainder: exactMinutes - minutes }
+  })
+  let minutesLeft = totalMinutes - ranked.reduce((sum, entry) => sum + entry.minutes, 0)
+  ranked.sort((a, b) => b.remainder - a.remainder || a.date.localeCompare(b.date))
+  for (const entry of ranked) {
+    if (minutesLeft <= 0) break
+    entry.minutes += 1
+    minutesLeft -= 1
+  }
+
+  return Object.fromEntries(
+    ranked.filter((entry) => entry.minutes > 0).map((entry) => [entry.date, entry.minutes]),
+  )
 }
 
 export function getRemainingMs(session: ActiveTimerSession, now = Date.now()): number {
@@ -186,6 +308,10 @@ function parseActiveTimer(raw: unknown, fallbackId: string): ActiveTimerSession 
     mode,
     durationMs,
     baseElapsedMs: data.baseElapsedMs,
+    elapsedMsByDate: normalizeElapsedMsByDate(data.elapsedMsByDate),
+    dateOffsetDays: typeof data.dateOffsetDays === 'number' && Number.isInteger(data.dateOffsetDays)
+      ? data.dateOffsetDays
+      : undefined,
     segmentStartedAt: data.status === 'paused' ? null : data.segmentStartedAt as number,
     completionKind: data.completionKind === 'reading' ? 'reading' : undefined,
   }
@@ -273,6 +399,7 @@ export function loadPendingReadingCompletion(): PendingReadingCompletion | null 
       bookTitle: value.bookTitle.trim(),
       date: value.date,
       minutes: value.minutes,
+      minuteAllocations: normalizeMinuteAllocations(value.minuteAllocations),
       completedAt: value.completedAt,
     }
   } catch {

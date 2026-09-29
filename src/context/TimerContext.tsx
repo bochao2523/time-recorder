@@ -8,17 +8,20 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import dayjs from 'dayjs'
 import type { Category } from '../types'
-import { appendReadingSessionToRecord, appendTimerTargetsToRecord } from '../lib/categoryItems'
-import { today } from '../lib/dateUtils'
+import { appendReadingLogToRecord, appendTaskMinutesToRecord, appendTimerTargetsToRecord } from '../lib/categoryItems'
+import { formatDate, today } from '../lib/dateUtils'
 import {
   clearActiveTimers,
   clearPendingReadingCompletion,
   createTimerId,
   elapsedMsToMinutes,
+  elapsedMsByDateToMinutes,
   formatSessionTargetNames,
   getDisplayMs,
   getElapsedMs,
+  getElapsedMsByDate,
   getSessionTargets,
   isCountdownFinished,
   isTimerExpired,
@@ -90,6 +93,7 @@ type PendingComplete = {
   targets?: TimerTarget[]
   date: string
   minutes: number
+  minuteAllocations?: Record<string, number>
 }
 
 function queueCompletedCountdowns(entries: PendingComplete[]) {
@@ -117,6 +121,7 @@ function loadInitialTimers(): {
     }
     if (isCountdownFinished(timer)) {
       const minutes = elapsedMsToMinutes(getElapsedMs(timer))
+      const minuteAllocations = elapsedMsByDateToMinutes(getElapsedMsByDate(timer))
       if (minutes > 0) {
         completed.push({
           id: timer.id,
@@ -125,6 +130,7 @@ function loadInitialTimers(): {
           targets: getSessionTargets(timer),
           date: timer.date,
           minutes,
+          minuteAllocations,
         })
       }
       continue
@@ -186,11 +192,17 @@ export function TimerProvider({ children }: { children: ReactNode }) {
           : [{ taskName: entry.taskName, category: entry.category }],
       )
       if (!targets.length || entry.minutes <= 0) continue
-      const existing = nextByDate.has(entry.date)
-        ? nextByDate.get(entry.date)
-        : getRecordByDate(entry.date)
-      const next = appendTimerTargetsToRecord(existing, entry.date, targets, entry.minutes)
-      if (next) nextByDate.set(entry.date, next)
+      const allocations = entry.minuteAllocations && Object.keys(entry.minuteAllocations).length
+        ? entry.minuteAllocations
+        : { [entry.date]: entry.minutes }
+      for (const [date, minutes] of Object.entries(allocations)) {
+        if (minutes <= 0) continue
+        const existing = nextByDate.has(date)
+          ? nextByDate.get(date)
+          : getRecordByDate(date)
+        const next = appendTimerTargetsToRecord(existing, date, targets, minutes)
+        if (next) nextByDate.set(date, next)
+      }
     }
 
     for (const record of nextByDate.values()) {
@@ -268,6 +280,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         targets: getSessionTargets(timer),
         date: timer.date,
         minutes: elapsedMsToMinutes(getElapsedMs(timer, now)),
+        minuteAllocations: elapsedMsByDateToMinutes(getElapsedMsByDate(timer, now)),
       }))
       .filter((entry) => entry.minutes > 0)
     recordCompletions(completedEntries, completedEntries.length === 1
@@ -301,16 +314,20 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     }
 
     const startedAt = Date.now()
+    const logicalDate = options.date ?? today()
+    const dateOffsetDays = dayjs(logicalDate).diff(dayjs(formatDate(new Date(startedAt))), 'day')
     const created = targets.map((target) => ({
       id: createTimerId(),
       taskName: target.taskName,
       category: target.category,
       targets: [target],
-      date: options.date ?? today(),
+      date: logicalDate,
       status: 'running' as const,
       mode,
       durationMs,
       baseElapsedMs: 0,
+      elapsedMsByDate: {},
+      dateOffsetDays,
       segmentStartedAt: startedAt,
       completionKind: target.category === 'reading' ? options.completionKind : undefined,
     }))
@@ -326,6 +343,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         ...timer,
         status: 'paused',
         baseElapsedMs: getElapsedMs(timer),
+        elapsedMsByDate: getElapsedMsByDate(timer),
         segmentStartedAt: null,
       }
     }))
@@ -364,6 +382,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     }
 
     const minutes = elapsedMsToMinutes(ms)
+    const minuteAllocations = elapsedMsByDateToMinutes(getElapsedMsByDate(current))
     const targets = getSessionTargets(current)
     persist(sessionsRef.current.filter((timer) => timer.id !== sessionId))
 
@@ -373,6 +392,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         bookTitle: current.taskName.trim(),
         date: current.date,
         minutes,
+        minuteAllocations,
         completedAt: new Date().toISOString(),
       }
       savePendingReadingCompletion(pending)
@@ -386,6 +406,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         targets,
         date: current.date,
         minutes,
+        minuteAllocations,
       }], `已结束「${current.taskName}」，记录 ${minutes} 分钟`)
     } else {
       setNotice({ message: `「${current.taskName}」少于 30 秒，未保存`, type: 'error' })
@@ -411,8 +432,19 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       !Number.isInteger(endPage) || endPage < startPage
     ) return false
 
-    const existing = getRecordByDate(pending.date)
-    const next = appendReadingSessionToRecord(existing, pending.date, {
+    const minuteAllocations = pending.minuteAllocations && Object.keys(pending.minuteAllocations).length
+      ? pending.minuteAllocations
+      : pending.minutes > 0 ? { [pending.date]: pending.minutes } : {}
+    const nextByDate = new Map<string, ReturnType<typeof getRecordByDate>>()
+    for (const [date, minutes] of Object.entries(minuteAllocations)) {
+      const existing = nextByDate.has(date) ? nextByDate.get(date) : getRecordByDate(date)
+      const next = appendTaskMinutesToRecord(existing, date, 'reading', pending.bookTitle, minutes)
+      if (next) nextByDate.set(date, next)
+    }
+
+    const logDate = Object.keys(minuteAllocations).sort().at(-1) ?? pending.date
+    const logBase = nextByDate.has(logDate) ? nextByDate.get(logDate) : getRecordByDate(logDate)
+    const logRecord = appendReadingLogToRecord(logBase, logDate, {
       id: pending.id,
       bookTitle: pending.bookTitle,
       startPage,
@@ -420,8 +452,10 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       minutes: pending.minutes,
       completedAt: pending.completedAt,
     })
-    if (!next) return false
-    upsertRecord(next)
+    nextByDate.set(logDate, logRecord)
+    for (const record of nextByDate.values()) {
+      if (record) upsertRecord(record)
+    }
     clearPendingReadingCompletion()
     setPendingReadingCompletion(null)
     setNotice({
