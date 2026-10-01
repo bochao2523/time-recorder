@@ -17,6 +17,8 @@ interface CategoryInputProps {
   onCategoryTimer?: () => void
   /** 当前是否正在为整个大类计时 */
   categoryTimerActive?: boolean
+  /** 分钟输入失焦且数值增加时触发；用于把新增阅读分钟关联到书籍。 */
+  onMinutesCommit?: (item: CategorySubItem, addedMinutes: number) => void
 }
 
 const SUB_ITEM_PLACEHOLDERS: Record<string, string> = {
@@ -105,6 +107,7 @@ export function CategoryInput({
   activeTaskNames = [],
   onCategoryTimer,
   categoryTimerActive = false,
+  onMinutesCommit,
 }: CategoryInputProps) {
   const { id: category, label, color } = definition
   const rows = displayItems(items)
@@ -113,6 +116,7 @@ export function CategoryInput({
   /** 分钟输入草稿：删光时显示空，失焦后再提交 0，避免改数时整行被自动清掉 */
   const [minutesDraft, setMinutesDraft] = useState<Record<number, string>>({})
   const minuteInputRefs = useRef(new Map<number, HTMLInputElement>())
+  const minutesAtFocusRef = useRef(new Map<number, number>())
 
   useEffect(() => {
     setMinutesDraft({})
@@ -144,16 +148,26 @@ export function CategoryInput({
     updateItem(index, { minutes: n })
   }
 
-  const handleMinutesBlur = (index: number) => {
-    if (minutesDraft[index] === undefined) return
-    if (minutesDraft[index] === '') {
-      updateItem(index, { minutes: 0 })
+  const handleMinutesBlur = (index: number, item: CategorySubItem) => {
+    const baseline = minutesAtFocusRef.current.get(index) ?? item.minutes
+    const committedMinutes = minutesDraft[index] === '' ? 0 : item.minutes
+    if (minutesDraft[index] !== undefined) {
+      if (minutesDraft[index] === '') {
+        updateItem(index, { minutes: 0 })
+      }
+      setMinutesDraft((prev) => {
+        const next = { ...prev }
+        delete next[index]
+        return next
+      })
     }
-    setMinutesDraft((prev) => {
-      const next = { ...prev }
-      delete next[index]
-      return next
-    })
+    minutesAtFocusRef.current.delete(index)
+    if (committedMinutes > baseline) {
+      onMinutesCommit?.(
+        { ...item, minutes: committedMinutes },
+        committedMinutes - baseline,
+      )
+    }
   }
 
   const handleRemove = (index: number) => {
@@ -308,7 +322,8 @@ export function CategoryInput({
                   enterKeyHint="done"
                   value={minutesValue}
                   onChange={(e) => handleMinutesChange(index, e.target.value)}
-                  onBlur={() => handleMinutesBlur(index)}
+                  onFocus={() => minutesAtFocusRef.current.set(index, item.minutes)}
+                  onBlur={() => handleMinutesBlur(index, item)}
                   placeholder="0"
                   aria-label="分钟"
                   className="depot-display min-h-12 w-full rounded-[10px] border border-terracotta/25 bg-calico py-2 pl-2 pr-6 text-center text-base font-bold tabular-nums placeholder:text-stone-400 focus:border-terracotta focus:bg-white focus:outline-none focus:ring-2 focus:ring-chrome-yellow/55"

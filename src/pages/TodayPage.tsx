@@ -4,8 +4,9 @@ import { PageCard } from '../components/layout/Layout'
 import { DatePicker } from '../components/common/DatePicker'
 import { CategoryInput } from '../components/common/CategoryInput'
 import { DailyCompletionCelebration } from '../components/common/DailyCompletionCelebration'
+import { ManualReadingEntryModal } from '../components/reading/ManualReadingEntryModal'
 import { useRecords } from '../context/RecordsContext'
-import { useTimer } from '../context/TimerContext'
+import { useTimer, type PendingReadingLink } from '../context/TimerContext'
 import {
   type Category,
   type CategorySubItem,
@@ -22,6 +23,7 @@ import {
 import { formatDisplayDate, formatMinutes, today } from '../lib/dateUtils'
 import {
   formatElapsed,
+  createTimerId,
   getDisplayMs,
   getSessionTargets,
 } from '../lib/timerStorage'
@@ -85,6 +87,7 @@ export function TodayPage() {
   const [subItems, setSubItems] = useState<CategorySubItems>(createEmptySubItems())
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [showCompletionCelebration, setShowCompletionCelebration] = useState(false)
+  const [pendingManualReadingLink, setPendingManualReadingLink] = useState<PendingReadingLink | null>(null)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveStatusRef = useRef(saveStatus)
   saveStatusRef.current = saveStatus
@@ -156,6 +159,17 @@ export function TodayPage() {
     setSubItems((prev) => ({ ...prev, [cat]: items ?? [] }))
     setSaveStatus('pending')
   }, [])
+
+  const handleReadingMinutesCommit = useCallback((item: CategorySubItem, addedMinutes: number) => {
+    if (addedMinutes <= 0) return
+    setPendingManualReadingLink({
+      id: createTimerId(),
+      taskName: item.name.trim() || '阅读',
+      date: selectedDate,
+      minutes: addedMinutes,
+      completedAt: selectedDate === today() ? new Date().toISOString() : undefined,
+    })
+  }, [selectedDate])
 
   /** 已有小类旁快捷正计时：同名累加记入 */
   const handleQuickTimer = useCallback(
@@ -412,6 +426,7 @@ export function TodayPage() {
             onChange={(items) => handleSubItemsChange(definition.id, items)}
             onQuickTimer={(item) => handleQuickTimer(definition.id, item)}
             onCategoryTimer={() => handleCategoryTimer(definition.id)}
+            onMinutesCommit={definition.id === 'reading' ? handleReadingMinutesCommit : undefined}
             categoryTimerActive={
               activeTimerTargets.some((target) => (
                 target.category === definition.id &&
@@ -424,6 +439,11 @@ export function TodayPage() {
           />
         ))}
       </div>
+      <ManualReadingEntryModal
+        open={Boolean(pendingManualReadingLink)}
+        onClose={() => setPendingManualReadingLink(null)}
+        recordedEntry={pendingManualReadingLink ?? undefined}
+      />
     </div>
   )
 }

@@ -57,7 +57,7 @@ export type PendingReadingLink = {
   taskName: string
   date: string
   minutes: number
-  completedAt: string
+  completedAt?: string
 }
 
 export type StartTimerOptions = {
