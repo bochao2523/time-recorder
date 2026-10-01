@@ -52,6 +52,14 @@ export type TimerNotice = {
   type: 'success' | 'error'
 }
 
+export type PendingReadingLink = {
+  id: string
+  taskName: string
+  date: string
+  minutes: number
+  completedAt: string
+}
+
 export type StartTimerOptions = {
   date?: string
   mode?: TimerMode
@@ -71,6 +79,7 @@ interface TimerContextValue {
   modalOpen: boolean
   notice: TimerNotice | null
   pendingReadingCompletion: PendingReadingCompletion | null
+  pendingReadingLink: PendingReadingLink | null
   openModal: () => void
   closeModal: () => void
   clearNotice: () => void
@@ -82,6 +91,7 @@ interface TimerContextValue {
   discard: (sessionId: string) => void
   completeReading: (startPage: number, endPage: number) => boolean
   discardReadingCompletion: () => void
+  dismissReadingLink: () => void
 }
 
 const TimerContext = createContext<TimerContextValue | null>(null)
@@ -160,6 +170,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const [pendingReadingCompletion, setPendingReadingCompletion] = useState<PendingReadingCompletion | null>(
     () => loadPendingReadingCompletion(),
   )
+  const [pendingReadingLink, setPendingReadingLink] = useState<PendingReadingLink | null>(null)
   const sessionsRef = useRef(sessions)
   sessionsRef.current = sessions
   const completingIdsRef = useRef(new Set<string>())
@@ -408,6 +419,20 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         minutes,
         minuteAllocations,
       }], `已结束「${current.taskName}」，记录 ${minutes} 分钟`)
+      const readingTarget = targets.length === 1 && targets[0].category === 'reading'
+        ? targets[0]
+        : null
+      if (readingTarget) {
+        const logDate = Object.keys(minuteAllocations).sort().at(-1) ?? current.date
+        setPendingReadingLink({
+          id: createTimerId(),
+          taskName: readingTarget.taskName,
+          date: logDate,
+          minutes,
+          completedAt: new Date().toISOString(),
+        })
+        setModalOpen(false)
+      }
     } else {
       setNotice({ message: `「${current.taskName}」少于 30 秒，未保存`, type: 'error' })
       return { ok: false, reason: 'too_short' }
@@ -471,6 +496,10 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     setNotice({ message: '本次阅读计时已删除', type: 'error' })
   }, [])
 
+  const dismissReadingLink = useCallback(() => {
+    setPendingReadingLink(null)
+  }, [])
+
   const session = sessions[0] ?? null
   const elapsedMs = session ? getElapsedMs(session, now) : 0
   const displayMs = session ? getDisplayMs(session, now) : 0
@@ -484,6 +513,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     modalOpen,
     notice,
     pendingReadingCompletion,
+    pendingReadingLink,
     openModal,
     closeModal,
     clearNotice,
@@ -495,6 +525,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     discard,
     completeReading,
     discardReadingCompletion,
+    dismissReadingLink,
   }), [
     sessions,
     session,
@@ -504,6 +535,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     modalOpen,
     notice,
     pendingReadingCompletion,
+    pendingReadingLink,
     openModal,
     closeModal,
     clearNotice,
@@ -515,6 +547,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     discard,
     completeReading,
     discardReadingCompletion,
+    dismissReadingLink,
   ])
 
   return <TimerContext.Provider value={value}>{children}</TimerContext.Provider>

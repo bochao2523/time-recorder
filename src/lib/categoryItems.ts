@@ -268,6 +268,7 @@ export function removeReadingSessions(
   const remainingLogs = (record.readingLogs ?? []).filter((entry) => !shouldRemove(entry))
   const removedMinutes = new Map<string, number>()
   for (const entry of removed) {
+    if (entry.linkedToExistingMinutes) continue
     const key = entry.bookTitle.trim().toLocaleLowerCase()
     removedMinutes.set(key, (removedMinutes.get(key) ?? 0) + (entry.minutes ?? 0))
   }

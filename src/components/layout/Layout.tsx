@@ -7,12 +7,13 @@ import { TimerModal } from '../timer/TimerModal'
 import { TimerNotice } from '../timer/TimerNotice'
 import { ReadingCompletionModal } from '../reading/ReadingCompletionModal'
 import { ReadingFocusView } from '../reading/ReadingFocusView'
+import { ManualReadingEntryModal } from '../reading/ManualReadingEntryModal'
 import { useTimer } from '../../context/TimerContext'
 
 export function Layout() {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
-  const { openModal } = useTimer()
+  const { openModal, pendingReadingLink, dismissReadingLink } = useTimer()
 
   useEffect(() => {
     const query = new URLSearchParams(search)
@@ -57,6 +58,11 @@ export function Layout() {
       <TimerFloatingBar />
       <TimerModal />
       <ReadingCompletionModal />
+      <ManualReadingEntryModal
+        open={Boolean(pendingReadingLink)}
+        onClose={dismissReadingLink}
+        recordedEntry={pendingReadingLink ?? undefined}
+      />
       <ReadingFocusView />
       <NavBar />
     </div>

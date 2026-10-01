@@ -47,6 +47,8 @@ export interface ReadingLogEntry {
   minutes?: number
   /** 本次阅读结束时间；ISO 字符串，旧记录可能没有 */
   completedAt?: string
+  /** 这段分钟已由普通阅读任务写入；删除日志时不可再次扣除。 */
+  linkedToExistingMinutes?: boolean
 }
 
 /** 跨日期保存的书籍资料，用于阅读进度与完读预估。 */

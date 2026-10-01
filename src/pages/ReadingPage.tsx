@@ -7,6 +7,7 @@ import { totalReadingPages } from '../lib/readingLogs'
 import { buildReadingBookInsights, collectReadingSessions, type ReadingBookInsights } from '../lib/readingInsights'
 import { MAX_ACTIVE_TIMERS } from '../lib/timerStorage'
 import type { ReadingBookMeta } from '../types'
+import { ManualReadingEntryModal } from '../components/reading/ManualReadingEntryModal'
 
 type BookView = { meta: ReadingBookMeta; insights: ReadingBookInsights; finished: boolean; lastReadAt: string }
 
@@ -20,6 +21,7 @@ export function ReadingPage() {
   const { sessions, pendingReadingCompletion, start, openModal, pushNotice } = useTimer()
   const [showAdd, setShowAdd] = useState(readingBooks.length === 0)
   const [showAllFinished, setShowAllFinished] = useState(false)
+  const [showManualEntry, setShowManualEntry] = useState(false)
   const [titleInput, setTitleInput] = useState('')
   const [pagesInput, setPagesInput] = useState('')
 
@@ -91,15 +93,16 @@ export function ReadingPage() {
 
   return <div className="no-layout-animation space-y-5">
     <section className="depot-cloth stitched-panel rounded-[14px] p-4 text-chrome-yellow">
-      <div className="flex items-start justify-between gap-3"><div><h2 className="text-2xl font-extrabold">我的书架</h2><p className="mt-1 text-xs text-chrome-yellow/70">选书开始阅读，点击书籍查看进度和记录</p></div><button type="button" onClick={() => setShowAdd((value) => !value)} className="min-h-11 shrink-0 rounded-[9px] bg-chrome-yellow px-3 text-sm font-extrabold text-terracotta">{showAdd ? '取消' : '+ 添加书籍'}</button></div>
+      <div className="sm:flex sm:items-start sm:justify-between sm:gap-4"><div><h2 className="text-2xl font-extrabold">我的书架</h2><p className="mt-1 text-xs text-chrome-yellow/70">选书开始计时，读完后也可以补记</p></div><div className="mt-3 grid grid-cols-2 gap-2 sm:mt-0 sm:flex"><button type="button" onClick={() => setShowManualEntry(true)} className="min-h-11 rounded-[10px] bg-chrome-yellow px-3 text-sm font-extrabold text-terracotta">补记阅读</button><button type="button" onClick={() => setShowAdd((value) => !value)} className="min-h-11 rounded-[10px] border border-chrome-yellow/55 px-3 text-sm font-extrabold text-chrome-yellow">{showAdd ? '取消添加' : '添加书籍'}</button></div></div>
       {showAdd && <form onSubmit={addBook} className="mt-4 grid gap-3 border-t border-dashed border-chrome-yellow/30 pt-4 sm:grid-cols-[1fr_9rem_auto] sm:items-end"><label className="text-xs font-bold">书名<input value={titleInput} onChange={(event) => setTitleInput(event.target.value.slice(0, 80))} placeholder="例如：设计心理学" className="mt-1 min-h-12 w-full rounded-[10px] border border-chrome-yellow/40 bg-calico px-3 text-base font-bold text-terracotta outline-none focus:ring-2 focus:ring-chrome-yellow" /></label><label className="text-xs font-bold">总页数<input value={pagesInput} onChange={(event) => setPagesInput(event.target.value.replace(/\D/g, '').slice(0, 5))} inputMode="numeric" placeholder="412" className="depot-display mt-1 min-h-12 w-full rounded-[10px] border border-chrome-yellow/40 bg-calico px-3 text-base font-bold text-terracotta outline-none focus:ring-2 focus:ring-chrome-yellow" /></label><button disabled={!canAdd} className="min-h-12 rounded-[10px] bg-chrome-yellow px-5 font-extrabold text-terracotta disabled:opacity-35">添加并查看</button></form>}
     </section>
 
-    <section className="calico-surface stitched-light rounded-[14px] p-4"><div className="flex items-center justify-between gap-4"><div><h2 className="text-lg font-extrabold text-terracotta">今天的书籍阅读</h2><p className="mt-1 text-xs text-stone-light">不包含普通“阅读”任务计时</p></div><div className="shrink-0 text-right"><b className="depot-display block text-2xl text-terracotta">{totalReadingPages(todayLogs)} 页</b><small className="font-bold text-stone-light">{todayLogs.length} 次 · {formatMinutes(todayBookMinutes)}</small></div></div></section>
+    <section className="calico-surface stitched-light rounded-[14px] p-4"><div className="flex items-center justify-between gap-4"><div><h2 className="text-lg font-extrabold text-terracotta">今天的书籍阅读</h2><p className="mt-1 text-xs text-stone-light">只显示已关联书籍的阅读</p></div><div className="shrink-0 text-right"><b className="depot-display block text-2xl text-terracotta">{totalReadingPages(todayLogs)} 页</b><small className="font-bold text-stone-light">{todayLogs.length} 次 · {formatMinutes(todayBookMinutes)}</small></div></div></section>
 
     {activeBooks.length > 0 && <section aria-labelledby="reading-books-active"><div className="mb-2 flex items-end justify-between px-1"><h2 id="reading-books-active" className="text-xl font-extrabold text-terracotta">正在阅读</h2><span className="text-xs font-bold text-stone-light">{activeBooks.length} 本</span></div><div className="space-y-3">{activeBooks.map((book) => <BookCard key={book.meta.title} book={book} />)}</div></section>}
     {finishedBooks.length > 0 && <section aria-labelledby="reading-books-finished"><div className="mb-2 flex items-end justify-between px-1"><h2 id="reading-books-finished" className="text-xl font-extrabold text-terracotta">已读完</h2><span className="text-xs font-bold text-stone-light">{finishedBooks.length} 本</span></div><div className="space-y-3">{displayedFinishedBooks.map((book) => <BookCard key={book.meta.title} book={book} />)}</div>{finishedBooks.length > 3 && <button type="button" onClick={() => setShowAllFinished((value) => !value)} className="mt-2 min-h-11 w-full text-sm font-extrabold text-terracotta">{showAllFinished ? '收起已读书籍' : `查看全部 ${finishedBooks.length} 本`}</button>}</section>}
     {!books.length && !showAdd && <button type="button" onClick={() => setShowAdd(true)} className="calico-surface stitched-light min-h-36 w-full rounded-[14px] px-5 text-center font-extrabold text-terracotta">添加第一本书</button>}
     {otherTimerCount > 0 && <button type="button" onClick={openModal} className="min-h-12 w-full rounded-[12px] border border-terracotta/25 bg-calico text-sm font-bold text-terracotta">还有 {otherTimerCount} 个其他任务在计时 · 查看</button>}
+    <ManualReadingEntryModal open={showManualEntry} onClose={() => setShowManualEntry(false)} />
   </div>
 }
